@@ -8,6 +8,7 @@
 
 // The RGB color in the source bitmap to treat as transparent
 #define MASK 0xFFFFFF
+#define STEP_SIZE 20
 
 #define ELLIPSE_HEIGHT 90
 #define ELLIPSE_WIDTH 90
@@ -17,7 +18,11 @@
 #define RECTANGLE_WIDTH 100
 #define RECTANGLE_COLOR 0x009999FF
 
-enum Figure { ELLIPSE, RECTANGLE, PICTURE };
+#define IDT_TIMER 1
+#define TIMER_INTERVAL 20
+
+enum FIGURE { ELLIPSE, RECTANGLE, PICTURE };
+enum DIRECTION { UP, RIGHT, LEFT, DOWN, NONE };
 
 // Global Variables:
 HINSTANCE hInst;                                // Current instance
@@ -25,8 +30,9 @@ WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // The main window class name
 
 HBITMAP hbmPicture = NULL;       //todo comment
-Figure figure = ELLIPSE;        // Type of object to be painted
-POINT ptCurPos = { 0, 0 };      // Current coordinates of the cursor
+FIGURE fFigure = ELLIPSE;        // Type of object to be painted
+POINT ptCurPos = { 0, 0 };       // Current coordinates of the cursor
+DIRECTION dObjDirection = NONE;  // Direction of movement of the object
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -166,7 +172,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				// todo why??
 				GetObject(hbmPicture, sizeof(bm), &bm);
 			}
-			break;
+
+			// The timer posts WM_TIMER message to the aplication queue in TIMER_INTERVAL milliseconds
+			UINT retValue = SetTimer(hWnd, IDT_TIMER, TIMER_INTERVAL, NULL);
+			if (retValue == 0)
+			{
+				MessageBox(hWnd, (LPCWSTR)L"Couldn't set timer.", (LPCWSTR)L"Error", MB_OK | MB_ICONERROR);
+			}
 		}
 		break;
     case WM_COMMAND:
@@ -176,15 +188,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             switch (wmId)
             {
 			case IDM_ELLIPSE:
-				figure = ELLIPSE;
+				fFigure = ELLIPSE;
 				RecreateObject(hWnd);  //todo comment
 				break;
 			case IDM_RECT:
-				figure = RECTANGLE;
+				fFigure = RECTANGLE;
 				RecreateObject(hWnd);  //todo comment
 				break;
 			case IDM_PICTURE:
-				figure = PICTURE;
+				fFigure = PICTURE;
 				RecreateObject(hWnd);
 				break;
             case IDM_ABOUT:
@@ -214,6 +226,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             EndPaint(hWnd, &ps);
         }
         break;
+	case WM_TIMER:
+		{
+			// The window's coordinates
+			RECT rectWindow;
+			// Device context handler
+			HDC hdc = GetDC(hWnd);
+
+			// Retrieve the coordinates of the window's client area
+			GetClientRect(hWnd, &rectWindow);
+
+			//todo  comment
+			UpdatePosition();
+
+			// Redraw the specified area
+			PaintObject(hdc, &rectWindow);
+			ReleaseDC(hWnd, hdc);
+		}
+		break;
     case WM_DESTROY:
 		// Causes the message loop to end
         PostQuitMessage(0);
@@ -257,7 +287,7 @@ VOID PaintObject(HDC hdc, RECT* prc)
 {
 	HBRUSH hBrush, hOldBrush;
 
-	switch (figure)
+	switch (fFigure)
 	{
 		case ELLIPSE:
 			hBrush = CreateSolidBrush(ELLIPSE_COLOR);
@@ -307,5 +337,32 @@ VOID PaintObject(HDC hdc, RECT* prc)
 			DeleteObject(hPrevBmp);
 
 			break;
+	}
+}
+
+VOID UpdatePosition()
+{
+	switch (dObjDirection)
+	{
+		case UP:
+		{
+			MoveUp();
+			break;
+		}
+		case LEFT:
+		{
+			MoveLeft();
+			break;
+		}
+		case DOWN:
+		{
+			MoveDown();
+			break;
+		}
+		case RIGHT:
+		{
+			MoveRight();
+			break;
+		}
 	}
 }
