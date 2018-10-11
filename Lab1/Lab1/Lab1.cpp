@@ -6,12 +6,15 @@
 
 #define MAX_LOADSTRING 100
 
-#define ELLIPSE_HEIGHT 255
-#define ELLIPSE_WIDTH 255
+// The RGB color in the source bitmap to treat as transparent
+#define MASK 0xFFFFFF
+
+#define ELLIPSE_HEIGHT 90
+#define ELLIPSE_WIDTH 90
 #define ELLIPSE_COLOR 0x0099FFCC
 
-#define RECTANGLE_HEIGHT 180
-#define RECTANGLE_WIDTH 220
+#define RECTANGLE_HEIGHT 80
+#define RECTANGLE_WIDTH 100
 #define RECTANGLE_COLOR 0x009999FF
 
 enum Figure { ELLIPSE, RECTANGLE, PICTURE };
@@ -21,7 +24,7 @@ HINSTANCE hInst;                                // Current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // The main window class name
 
-HBITMAP bmPicture = NULL;       //todo comment
+HBITMAP hbmPicture = NULL;       //todo comment
 Figure figure = ELLIPSE;        // Type of object to be painted
 POINT ptCurPos = { 0, 0 };      // Current coordinates of the cursor
 
@@ -30,6 +33,8 @@ ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+VOID PaintObject(HDC hdc, RECT* prc);
+VOID RecreateObject(HWND hWnd);
 
 // The application entry point
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,          // The current instance of tha application
@@ -150,15 +155,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_CREATE:
 		{
 			// Load the specified bitmap descriptor
-			bmPicture = LoadBitmap(hInst, MAKEINTRESOURCE(IDB_PICTURE)); 
-			if (bmPicture == NULL)
+			hbmPicture = LoadBitmap(hInst, MAKEINTRESOURCE(IDB_PICTURE)); 
+			if (hbmPicture == NULL)
 			{
 				MessageBox(hWnd, (LPCWSTR)L"Couldn't load the specified bitmap.", (LPCWSTR)L"Error", MB_OK | MB_ICONERROR);
 			}
 			else
 			{
 				// Load the bitmap 
-				GetObject(bmPicture, sizeof(bm), &bm);
+				// todo why??
+				GetObject(hbmPicture, sizeof(bm), &bm);
 			}
 			break;
 		}
@@ -202,6 +208,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 			// Retrieve the coordinates of the window's client area
 			GetClientRect(hWnd, &rectWindow);
+			// Redraw the specified area
 			PaintObject(hdc, &rectWindow);
 
             EndPaint(hWnd, &ps);
@@ -248,13 +255,15 @@ VOID RecreateObject(HWND hWnd)
 //todo comment
 VOID PaintObject(HDC hdc, RECT* prc)
 {
+	HBRUSH hBrush, hOldBrush;
+
 	switch (figure)
 	{
 		case ELLIPSE:
-			HBRUSH hBrush = CreateSolidBrush(ELLIPSE_COLOR);
+			hBrush = CreateSolidBrush(ELLIPSE_COLOR);
 
 			// Return an old brush handler and replace it with the new one
-			HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hBrush);
+			hOldBrush = (HBRUSH)SelectObject(hdc, hBrush);
 			
 			// Draw ellipse
 			Ellipse(hdc, ptCurPos.x, ptCurPos.y, ptCurPos.x + ELLIPSE_WIDTH, ptCurPos.y + ELLIPSE_HEIGHT);
@@ -264,11 +273,12 @@ VOID PaintObject(HDC hdc, RECT* prc)
 			DeleteObject(hBrush);
 
 			break;
+
 		case RECTANGLE:
-			HBRUSH hBrush = CreateSolidBrush(RECTANGLE_COLOR);
+			hBrush = CreateSolidBrush(RECTANGLE_COLOR);
 
 			// Return an old brush handler and replace it with the new one
-			HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hBrush);
+			hOldBrush = (HBRUSH)SelectObject(hdc, hBrush);
 
 			// Draw rectangle
 			Rectangle(hdc, ptCurPos.x, ptCurPos.y, ptCurPos.x + RECTANGLE_WIDTH, ptCurPos.y + RECTANGLE_HEIGHT);
@@ -278,7 +288,24 @@ VOID PaintObject(HDC hdc, RECT* prc)
 			DeleteObject(hBrush);
 
 			break;
+
 		case PICTURE:
+			BITMAP bmp;
+			//todo whyyy
+			GetObject(hbmPicture, sizeof(BITMAP), &bmp);
+
+			//todo comment
+			HDC hMemDC = CreateCompatibleDC(hdc);
+			//todo comment
+			HBITMAP hPrevBmp = (HBITMAP)SelectObject(hMemDC, hbmPicture);
+			// Transfer the picure to the device context 
+			TransparentBlt(hdc, ptCurPos.x, ptCurPos.y, bmp.bmWidth, bmp.bmHeight, 
+				hMemDC, 0, 0, bmp.bmWidth, bmp.bmHeight, MASK);
+
+			SelectObject(hMemDC, hPrevBmp);
+			DeleteDC(hMemDC);
+			DeleteObject(hPrevBmp);
+
 			break;
 	}
 }
