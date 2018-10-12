@@ -8,7 +8,7 @@
 
 // The RGB color in the source bitmap to treat as transparent
 #define MASK 0xFFFFFF
-#define STEP_SIZE 20
+#define STEP_SIZE 10
 
 #define ELLIPSE_HEIGHT 90
 #define ELLIPSE_WIDTH 90
@@ -19,7 +19,7 @@
 #define RECTANGLE_COLOR 0x009999FF
 
 #define IDT_TIMER 1
-#define TIMER_INTERVAL 20
+#define TIMER_INTERVAL 2
 
 enum FIGURE { ELLIPSE, RECTANGLE, PICTURE };
 enum DIRECTION { UP, RIGHT, LEFT, DOWN, NONE };
@@ -47,7 +47,7 @@ VOID MoveUp();
 VOID MoveDown(int bottomBorder, int bmpHeight);
 VOID MoveLeft();
 VOID MoveRight(int rightBorder, int bmpWidth);
-VOID MoveObjectOnArrowKey(WPARAM wParam);
+VOID MoveObjectOnArrowKey(HWND hWnd, WPARAM wParam, RECT wndRect, BITMAP bm);
 
 // The application entry point
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,          // The current instance of tha application
@@ -162,6 +162,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	BITMAP bm; //todo comment
+	RECT wndRect;  //todo comment
 
     switch (message)
     {
@@ -233,26 +234,30 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             EndPaint(hWnd, &ps);
         }
         break;
-	case WM_TIMER:
+	//case WM_TIMER:
+	//	{
+	//		// The window's coordinates
+	//		RECT rectWindow;
+	//		// Device context handler
+	//		HDC hdc = GetDC(hWnd);
+
+	//		// Retrieve the coordinates of the window's client area
+	//		GetClientRect(hWnd, &rectWindow);
+
+	//		//todo  comment
+	//		UpdatePosition(rectWindow, bm);
+
+	//		// Redraw the specified area
+	//		PaintObject(hdc, &rectWindow);
+	//		ReleaseDC(hWnd, hdc);
+	//	}
+	//	break;
+	case WM_KEYDOWN: 
 		{
-			// The window's coordinates
-			RECT rectWindow;
-			// Device context handler
-			HDC hdc = GetDC(hWnd);
-
-			// Retrieve the coordinates of the window's client area
-			GetClientRect(hWnd, &rectWindow);
-
-			//todo  comment
-			UpdatePosition(rectWindow, bm);
-
-			// Redraw the specified area
-			PaintObject(hdc, &rectWindow);
-			ReleaseDC(hWnd, hdc);
+			GetObject(hbmPicture, sizeof(BITMAP), &bm);
+			GetClientRect(hWnd, &wndRect);
+			MoveObjectOnArrowKey(hWnd, wParam, wndRect, bm);
 		}
-		break;
-	case WM_KEYDOWN:
-		MoveObjectOnArrowKey(wParam);
 		break;
     case WM_DESTROY:
 		// Causes the message loop to end
@@ -287,7 +292,6 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 //todo comment
 VOID RecreateObject(HWND hWnd)
 {
-	//todo objDirection = DIRECTION_NONE;
 	// Set the whole window to be redrawn when the next WM_PAINT message occurs
 	InvalidateRect(hWnd, NULL, TRUE);
 }
@@ -446,21 +450,25 @@ VOID MoveRight(int rightBorder, int bmpWidth)
 	}
 }
 
-VOID MoveObjectOnArrowKey(WPARAM wParam)
+VOID MoveObjectOnArrowKey(HWND hWnd, WPARAM wParam, RECT wndRect, BITMAP bm)
 {
-	switch (wParam)
+	int wmId = LOWORD(wParam);
+	switch (wmId)
 	{
-		case VK_RIGHT:
-			dObjDirection = RIGHT;
+		case VK_DOWN:
+			MoveDown(wndRect.bottom, bm.bmHeight);
 			break;
 		case VK_UP:
-			dObjDirection = UP;
+			MoveUp();
 			break;
-		case VK_LEFT:
-			dObjDirection = LEFT;
+		case VK_LEFT:		
+			MoveLeft();
 			break;
-		case VK_DOWN:
-			dObjDirection = DOWN;
+		case VK_RIGHT:
+			MoveRight(wndRect.right, bm.bmWidth);
 			break;
 	}
+
+	//todo comment
+	InvalidateRect(hWnd, NULL, TRUE);
 }
