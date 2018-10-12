@@ -47,6 +47,7 @@ VOID MoveUp();
 VOID MoveDown(int bottomBorder, int bmpHeight);
 VOID MoveLeft();
 VOID MoveRight(int rightBorder, int bmpWidth);
+VOID MoveObjectOnArrowKey(WPARAM wParam);
 
 // The application entry point
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,          // The current instance of tha application
@@ -250,6 +251,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			ReleaseDC(hWnd, hdc);
 		}
 		break;
+	case WM_KEYDOWN:
+		MoveObjectOnArrowKey(wParam);
+		break;
     case WM_DESTROY:
 		// Causes the message loop to end
         PostQuitMessage(0);
@@ -439,5 +443,24 @@ VOID MoveRight(int rightBorder, int bmpWidth)
 	{
 		ptCurPos.x = nextPosition;
 		dObjDirection = RIGHT;
+	}
+}
+
+VOID MoveObjectOnArrowKey(WPARAM wParam)
+{
+	switch (wParam)
+	{
+		case VK_RIGHT:
+			dObjDirection = RIGHT;
+			break;
+		case VK_UP:
+			dObjDirection = UP;
+			break;
+		case VK_LEFT:
+			dObjDirection = LEFT;
+			break;
+		case VK_DOWN:
+			dObjDirection = DOWN;
+			break;
 	}
 }
