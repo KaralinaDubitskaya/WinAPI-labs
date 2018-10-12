@@ -42,6 +42,12 @@ INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 VOID PaintObject(HDC hdc, RECT* prc);
 VOID RecreateObject(HWND hWnd);
 
+VOID UpdatePosition(RECT wndRect, BITMAP bm);
+VOID MoveUp();
+VOID MoveDown(int bottomBorder, int bmpHeight);
+VOID MoveLeft();
+VOID MoveRight(int rightBorder, int bmpWidth);
+
 // The application entry point
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,          // The current instance of tha application
                      _In_opt_ HINSTANCE hPrevInstance,   // Always null
@@ -237,7 +243,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			GetClientRect(hWnd, &rectWindow);
 
 			//todo  comment
-			UpdatePosition();
+			UpdatePosition(rectWindow, bm);
 
 			// Redraw the specified area
 			PaintObject(hdc, &rectWindow);
@@ -340,7 +346,8 @@ VOID PaintObject(HDC hdc, RECT* prc)
 	}
 }
 
-VOID UpdatePosition()
+//todo comment
+VOID UpdatePosition(RECT wndRect, BITMAP bm)
 {
 	switch (dObjDirection)
 	{
@@ -356,13 +363,81 @@ VOID UpdatePosition()
 		}
 		case DOWN:
 		{
-			MoveDown();
+			MoveDown(wndRect.bottom, bm.bmHeight);
 			break;
 		}
 		case RIGHT:
 		{
-			MoveRight();
+			MoveRight(wndRect.right, bm.bmWidth);
 			break;
 		}
+	}
+}
+
+VOID MoveUp()
+{
+	int posLimit = 0;  	// the topmost position
+	int nextPosition = ptCurPos.y - STEP_SIZE;
+
+	if (nextPosition < posLimit)
+	{
+		ptCurPos.y = posLimit;
+		dObjDirection = DOWN;   // rebound
+	}
+	else
+	{
+		ptCurPos.y = nextPosition;
+		dObjDirection = UP;
+	}
+}
+
+VOID MoveDown(int bottomBorder, int bmpHeight)
+{
+	int posLimit = bottomBorder - bmpHeight;  	// the lowest position
+	int nextPosition = ptCurPos.y + STEP_SIZE;
+
+	if (nextPosition > posLimit)
+	{
+		ptCurPos.y = posLimit;
+		dObjDirection = UP;   // rebound
+	}
+	else
+	{
+		ptCurPos.y = nextPosition;
+		dObjDirection = DOWN;
+	}
+}
+
+VOID MoveLeft()
+{
+	int posLimit = 0;  	// the leftmost position
+	int nextPosition = ptCurPos.x - STEP_SIZE;
+
+	if (nextPosition < posLimit)
+	{
+		ptCurPos.x = posLimit;
+		dObjDirection = RIGHT;   // rebound
+	}
+	else
+	{
+		ptCurPos.x = nextPosition;
+		dObjDirection = LEFT;
+	}
+}
+
+VOID MoveRight(int rightBorder, int bmpWidth)
+{
+	int posLimit = rightBorder - bmpWidth;  	// the rightmost position
+	int nextPosition = ptCurPos.x + STEP_SIZE;
+
+	if (nextPosition > posLimit)
+	{
+		ptCurPos.x = posLimit;
+		dObjDirection = LEFT;   // rebound
+	}
+	else
+	{
+		ptCurPos.x = nextPosition;
+		dObjDirection = RIGHT;
 	}
 }
