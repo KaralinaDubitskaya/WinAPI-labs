@@ -45,25 +45,33 @@ typedef struct _OBJINFO
 HINSTANCE hInst;                                // Current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // The main window class name
-HBITMAP hbmPicture = NULL;       //todo comment
-OBJINFO oObjInfo;
+HBITMAP hbmPicture = NULL;                      //todo comment
+OBJINFO oObjInfo;                               //todo comment
+BOOL bIsObjSelected = false;                    //todo comment
+
+// The offset between coordinates of the upper-left corner of the object
+// and coordinates of mouse at the moment of clicking on the object
+int mouseOffsetX;
+int mouseOffsetY;
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
-OBJINFO InitializeObjInfo(FIGURE figure, DIRECTION direction, POINT position, int width, int height);
-VOID ChangeFigure(OBJINFO *obj, FIGURE figure, int width, int height);
-VOID PaintObject(HDC hdc, RECT* prc);
-VOID RecreateObject(HWND hWnd);
+OBJINFO             InitializeObjInfo(FIGURE figure, DIRECTION direction, POINT position, int width, int height);
+VOID                ChangeFigure(OBJINFO *obj, FIGURE figure, int width, int height);
+VOID                PaintObject(HDC hdc, RECT* prc);
+VOID                RecreateObject(HWND hWnd);
 
 //VOID UpdatePosition(RECT wndRect, long objHeight, long objWidth);
-VOID MoveUp();
-VOID MoveDown(int bottomBorder, int objHeight);
-VOID MoveLeft();
-VOID MoveRight(int rightBorder, int objWidth);
-VOID MoveObjectOnArrowKey(HWND hWnd, WPARAM wParam, RECT wndRect);
+VOID				MoveUp();
+VOID				MoveDown(int bottomBorder, int objHeight);
+VOID				MoveLeft();
+VOID				MoveRight(int rightBorder, int objWidth);
+VOID				MoveObjectOnArrowKey(HWND hWnd, WPARAM wParam, RECT wndRect);
+BOOL				IsMouseOverObject(POINT mousePosition, OBJINFO obj);
+VOID UpdatePosition(RECT rectWnd, POINT mousePos, OBJINFO *obj);
 
 // The application entry point
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,          // The current instance of tha application
@@ -278,6 +286,52 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			MoveObjectOnArrowKey(hWnd, wParam, wndRect);
 		}
 		break;
+	case WM_LBUTTONDOWN:
+	{
+		POINT ptMousePosition = { LOWORD(lParam), HIWORD(lParam) };
+		GetObject(hbmPicture, sizeof(BITMAP), &bm);
+
+		// User grab the object
+		if (IsMouseOverObject(ptMousePosition, oObjInfo))
+		{
+			// The offset between coordinates of the upper-left corner of the object
+			// and coordinates of the mouse at the moment of clicking on the object
+			mouseOffsetX = ptMousePosition.x - oObjInfo.x;
+			mouseOffsetY = ptMousePosition.y - oObjInfo.y;
+
+			bIsObjSelected = true;
+		}
+
+		// The window will continue to receive WM_MOUSEMOVE messages
+		// even if the mouse moves outside the window
+		SetCapture(hWnd);
+	}
+	break;
+	case WM_LBUTTONUP:
+	{
+		bIsObjSelected = false;
+
+		// Stop to receive WM_MOUSEMOVE messages
+		// if the mouse moves outside the window
+		ReleaseCapture();
+	}
+	break;
+	case WM_MOUSEMOVE:
+	{
+		if (bIsObjSelected)
+		{
+			GetObject(hbmPicture, sizeof(BITMAP), &bm);
+			GetClientRect(hWnd, &wndRect);
+
+			// Current coordinates of the mouse taking into account the offset
+			int x = GET_X_LPARAM(lParam) - mouseOffsetX;
+			int y = GET_Y_LPARAM(lParam) - mouseOffsetY;
+
+			UpdatePosition(wndRect, { x,y }, &oObjInfo);
+			RecreateObject(hWnd);
+		}
+	}
+	break;
     case WM_DESTROY:
 		// Causes the message loop to end
         PostQuitMessage(0);
@@ -423,6 +477,31 @@ VOID PaintObject(HDC hdc, RECT* prc)
 //		}
 //	}
 //}
+
+//todo commnet
+BOOL IsMouseOverObject(POINT mousePosition, OBJINFO obj)
+{
+	return ((mousePosition.x < obj.x + obj.width) && (mousePosition.x > obj.x)
+		&& (mousePosition.y < obj.y + obj.height) && (mousePosition.y > obj.y));
+}
+
+// Update position of the object on mouse move
+VOID UpdatePosition(RECT rectWnd, POINT mousePos, OBJINFO *obj)
+{
+	if (mousePos.x < 0)
+		(*obj).x = 0;
+	else if (mousePos.x + (*obj).width > rectWnd.right)
+		(*obj).x = rectWnd.right - (*obj).width;
+	else
+		(*obj).x = mousePos.x;
+
+	if (mousePos.y < 0)
+		(*obj).y = 0;
+	else if (mousePos.y + (*obj).height > rectWnd.bottom)
+		(*obj).y = rectWnd.bottom - (*obj).height;
+	else
+		(*obj).y = mousePos.y;
+}
 
 VOID MoveUp()
 {
