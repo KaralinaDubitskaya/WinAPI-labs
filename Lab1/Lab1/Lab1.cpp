@@ -172,7 +172,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
-//
+//todo comment
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
 //  PURPOSE:  Processes messages for the main window.
@@ -206,18 +206,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 
 			oObjInfo = InitializeObjInfo(ELLIPSE, NONE, { 0, 0 }, ELLIPSE_WIDTH, ELLIPSE_HEIGHT);
-
-			// The timer posts WM_TIMER message to the aplication queue in TIMER_INTERVAL milliseconds
-			/*UINT retValue = SetTimer(hWnd, IDT_TIMER, TIMER_INTERVAL, NULL);
-			if (retValue == 0)
-			{
-				MessageBox(hWnd, (LPCWSTR)L"Couldn't set timer.", (LPCWSTR)L"Error", MB_OK | MB_ICONERROR);
-			}*/
 		}
 		break;
     case WM_COMMAND:
         {
             int wmId = LOWORD(wParam);
+
             // Parse the menu selections:
             switch (wmId)
             {
@@ -261,24 +255,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             EndPaint(hWnd, &ps);
         }
         break;
-	//case WM_TIMER:
-	//	{
-	//		// The window's coordinates
-	//		RECT rectWindow;
-	//		// Device context handler
-	//		HDC hdc = GetDC(hWnd);
-
-	//		// Retrieve the coordinates of the window's client area
-	//		GetClientRect(hWnd, &rectWindow);
-
-	//		//todo  comment
-	//		UpdatePosition(rectWindow, bm);
-
-	//		// Redraw the specified area
-	//		PaintObject(hdc, &rectWindow);
-	//		ReleaseDC(hWnd, hdc);
-	//	}
-	//	break;
 	case WM_KEYDOWN: 
 		{
 			GetObject(hbmPicture, sizeof(BITMAP), &bm);
@@ -330,6 +306,36 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			UpdatePosition(wndRect, { x,y }, &oObjInfo);
 			RecreateObject(hWnd);
 		}
+	}
+	break;
+	case WM_MOUSEWHEEL:
+	{
+		GetObject(hbmPicture, sizeof(BITMAP), &bm);
+		GetClientRect(hWnd, &wndRect);
+
+		// Indicates which keys are down
+		int keys = GET_KEYSTATE_WPARAM(wParam);
+
+		// Positive value indicates that the wheel was rotated 
+		// away from the user, negative - toward the user
+		int delta = GET_WHEEL_DELTA_WPARAM(wParam);
+
+		if (keys == MK_SHIFT)
+		{
+			if (delta > 0)
+				MoveRight(wndRect.right, oObjInfo.width);
+			else if (delta < 0)
+				MoveLeft();
+		}
+		else
+		{
+			if (delta > 0)
+				MoveUp();
+			else if (delta < 0)
+				MoveDown(wndRect.bottom, oObjInfo.height);
+		}
+
+		RecreateObject(hWnd);
 	}
 	break;
     case WM_DESTROY:
