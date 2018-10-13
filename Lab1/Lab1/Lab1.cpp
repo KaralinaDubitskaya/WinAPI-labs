@@ -24,30 +24,46 @@
 enum FIGURE { ELLIPSE, RECTANGLE, PICTURE };
 enum DIRECTION { UP, RIGHT, LEFT, DOWN, NONE };
 
+typedef struct _OBJINFO
+{
+	// Type of object to be painted
+	FIGURE figure;
+
+	// Height and width of the painted object
+	int width;
+	int height;
+
+	// Current coordinates of the cursor
+	int x;
+	int y;
+
+	// Direction of movement of the object
+	DIRECTION direction;
+} OBJINFO;
+
 // Global Variables:
 HINSTANCE hInst;                                // Current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // The main window class name
-
 HBITMAP hbmPicture = NULL;       //todo comment
-FIGURE fFigure = ELLIPSE;        // Type of object to be painted
-POINT ptCurPos = { 0, 0 };       // Current coordinates of the cursor
-DIRECTION dObjDirection = NONE;  // Direction of movement of the object
+OBJINFO oObjInfo;
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+OBJINFO InitializeObjInfo(FIGURE figure, DIRECTION direction, POINT position, int width, int height);
+VOID ChangeFigure(OBJINFO *obj, FIGURE figure, int width, int height);
 VOID PaintObject(HDC hdc, RECT* prc);
 VOID RecreateObject(HWND hWnd);
 
-VOID UpdatePosition(RECT wndRect, BITMAP bm);
+//VOID UpdatePosition(RECT wndRect, long objHeight, long objWidth);
 VOID MoveUp();
-VOID MoveDown(int bottomBorder, int bmpHeight);
+VOID MoveDown(int bottomBorder, int objHeight);
 VOID MoveLeft();
-VOID MoveRight(int rightBorder, int bmpWidth);
-VOID MoveObjectOnArrowKey(HWND hWnd, WPARAM wParam, RECT wndRect, BITMAP bm);
+VOID MoveRight(int rightBorder, int objWidth);
+VOID MoveObjectOnArrowKey(HWND hWnd, WPARAM wParam, RECT wndRect);
 
 // The application entry point
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,          // The current instance of tha application
@@ -181,12 +197,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				GetObject(hbmPicture, sizeof(bm), &bm);
 			}
 
+			oObjInfo = InitializeObjInfo(ELLIPSE, NONE, { 0, 0 }, ELLIPSE_WIDTH, ELLIPSE_HEIGHT);
+
 			// The timer posts WM_TIMER message to the aplication queue in TIMER_INTERVAL milliseconds
-			UINT retValue = SetTimer(hWnd, IDT_TIMER, TIMER_INTERVAL, NULL);
+			/*UINT retValue = SetTimer(hWnd, IDT_TIMER, TIMER_INTERVAL, NULL);
 			if (retValue == 0)
 			{
 				MessageBox(hWnd, (LPCWSTR)L"Couldn't set timer.", (LPCWSTR)L"Error", MB_OK | MB_ICONERROR);
-			}
+			}*/
 		}
 		break;
     case WM_COMMAND:
@@ -196,15 +214,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             switch (wmId)
             {
 			case IDM_ELLIPSE:
-				fFigure = ELLIPSE;
+				ChangeFigure(&oObjInfo, ELLIPSE, ELLIPSE_WIDTH, ELLIPSE_HEIGHT);
 				RecreateObject(hWnd);  //todo comment
 				break;
 			case IDM_RECT:
-				fFigure = RECTANGLE;
+				ChangeFigure(&oObjInfo, RECTANGLE, RECTANGLE_WIDTH, RECTANGLE_HEIGHT);
 				RecreateObject(hWnd);  //todo comment
 				break;
 			case IDM_PICTURE:
-				fFigure = PICTURE;
+				GetObject(hbmPicture, sizeof(bm), &bm);
+				ChangeFigure(&oObjInfo, PICTURE, bm.bmWidth, bm.bmHeight);
 				RecreateObject(hWnd);
 				break;
             case IDM_ABOUT:
@@ -256,7 +275,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 			GetObject(hbmPicture, sizeof(BITMAP), &bm);
 			GetClientRect(hWnd, &wndRect);
-			MoveObjectOnArrowKey(hWnd, wParam, wndRect, bm);
+			MoveObjectOnArrowKey(hWnd, wParam, wndRect);
 		}
 		break;
     case WM_DESTROY:
@@ -289,6 +308,29 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     return (INT_PTR)FALSE;
 }
 
+// Return the OBJINFO structure with initialized fields
+OBJINFO InitializeObjInfo(FIGURE figure, DIRECTION direction, POINT position, int width, int height)
+{
+	OBJINFO obj;
+
+	obj.figure = figure;
+	obj.direction = direction;
+	obj.x = position.x;
+	obj.y = position.y;
+	obj.height = height;
+	obj.width = width;
+
+	return obj;
+}
+
+// Change info about object in OBJINFO structure
+VOID ChangeFigure(OBJINFO *obj, FIGURE figure, int width, int height)
+{
+	(*obj).figure = figure;
+	(*obj).height = height;
+	(*obj).width = width;
+}
+
 //todo comment
 VOID RecreateObject(HWND hWnd)
 {
@@ -301,7 +343,7 @@ VOID PaintObject(HDC hdc, RECT* prc)
 {
 	HBRUSH hBrush, hOldBrush;
 
-	switch (fFigure)
+	switch (oObjInfo.figure)
 	{
 		case ELLIPSE:
 			hBrush = CreateSolidBrush(ELLIPSE_COLOR);
@@ -310,7 +352,7 @@ VOID PaintObject(HDC hdc, RECT* prc)
 			hOldBrush = (HBRUSH)SelectObject(hdc, hBrush);
 			
 			// Draw ellipse
-			Ellipse(hdc, ptCurPos.x, ptCurPos.y, ptCurPos.x + ELLIPSE_WIDTH, ptCurPos.y + ELLIPSE_HEIGHT);
+			Ellipse(hdc, oObjInfo.x, oObjInfo.y, oObjInfo.x + ELLIPSE_WIDTH, oObjInfo.y + ELLIPSE_HEIGHT);
 			
 			// Return the previous brush
 			SelectObject(hdc, hOldBrush);
@@ -325,7 +367,7 @@ VOID PaintObject(HDC hdc, RECT* prc)
 			hOldBrush = (HBRUSH)SelectObject(hdc, hBrush);
 
 			// Draw rectangle
-			Rectangle(hdc, ptCurPos.x, ptCurPos.y, ptCurPos.x + RECTANGLE_WIDTH, ptCurPos.y + RECTANGLE_HEIGHT);
+			Rectangle(hdc, oObjInfo.x, oObjInfo.y, oObjInfo.x + RECTANGLE_WIDTH, oObjInfo.y + RECTANGLE_HEIGHT);
 
 			// Return the previous brush
 			SelectObject(hdc, hOldBrush);
@@ -343,7 +385,7 @@ VOID PaintObject(HDC hdc, RECT* prc)
 			//todo comment
 			HBITMAP hPrevBmp = (HBITMAP)SelectObject(hMemDC, hbmPicture);
 			// Transfer the picure to the device context 
-			TransparentBlt(hdc, ptCurPos.x, ptCurPos.y, bmp.bmWidth, bmp.bmHeight, 
+			TransparentBlt(hdc, oObjInfo.x, oObjInfo.y, bmp.bmWidth, bmp.bmHeight,
 				hMemDC, 0, 0, bmp.bmWidth, bmp.bmHeight, MASK);
 
 			SelectObject(hMemDC, hPrevBmp);
@@ -355,108 +397,108 @@ VOID PaintObject(HDC hdc, RECT* prc)
 }
 
 //todo comment
-VOID UpdatePosition(RECT wndRect, BITMAP bm)
-{
-	switch (dObjDirection)
-	{
-		case UP:
-		{
-			MoveUp();
-			break;
-		}
-		case LEFT:
-		{
-			MoveLeft();
-			break;
-		}
-		case DOWN:
-		{
-			MoveDown(wndRect.bottom, bm.bmHeight);
-			break;
-		}
-		case RIGHT:
-		{
-			MoveRight(wndRect.right, bm.bmWidth);
-			break;
-		}
-	}
-}
+//VOID UpdatePosition(RECT wndRect, long objHeight, long objWidth)
+//{
+//	switch (dObjDirection)
+//	{
+//		case UP:
+//		{
+//			MoveUp();
+//			break;
+//		}
+//		case LEFT:
+//		{
+//			MoveLeft();
+//			break;
+//		}
+//		case DOWN:
+//		{
+//			MoveDown(wndRect.bottom, objHeight);
+//			break;
+//		}
+//		case RIGHT:
+//		{
+//			MoveRight(wndRect.right, objWidth);
+//			break;
+//		}
+//	}
+//}
 
 VOID MoveUp()
 {
 	int posLimit = 0;  	// the topmost position
-	int nextPosition = ptCurPos.y - STEP_SIZE;
+	int nextPosition = oObjInfo.y - STEP_SIZE;
 
 	if (nextPosition < posLimit)
 	{
-		ptCurPos.y = posLimit;
-		dObjDirection = DOWN;   // rebound
+		oObjInfo.y = posLimit;
+		oObjInfo.direction = DOWN;   // rebound
 	}
 	else
 	{
-		ptCurPos.y = nextPosition;
-		dObjDirection = UP;
+		oObjInfo.y = nextPosition;
+		oObjInfo.direction = UP;
 	}
 }
 
-VOID MoveDown(int bottomBorder, int bmpHeight)
+VOID MoveDown(int bottomBorder, int objHeight)
 {
-	int posLimit = bottomBorder - bmpHeight;  	// the lowest position
-	int nextPosition = ptCurPos.y + STEP_SIZE;
+	int posLimit = bottomBorder - objHeight;  	// the lowest position
+	int nextPosition = oObjInfo.y + STEP_SIZE;
 
 	if (nextPosition > posLimit)
 	{
-		ptCurPos.y = posLimit;
-		dObjDirection = UP;   // rebound
+		oObjInfo.y = posLimit;
+		oObjInfo.direction = UP;   // rebound
 	}
 	else
 	{
-		ptCurPos.y = nextPosition;
-		dObjDirection = DOWN;
+		oObjInfo.y = nextPosition;
+		oObjInfo.direction = DOWN;
 	}
 }
 
 VOID MoveLeft()
 {
 	int posLimit = 0;  	// the leftmost position
-	int nextPosition = ptCurPos.x - STEP_SIZE;
+	int nextPosition = oObjInfo.x - STEP_SIZE;
 
 	if (nextPosition < posLimit)
 	{
-		ptCurPos.x = posLimit;
-		dObjDirection = RIGHT;   // rebound
+		oObjInfo.x = posLimit;
+		oObjInfo.direction = RIGHT;   // rebound
 	}
 	else
 	{
-		ptCurPos.x = nextPosition;
-		dObjDirection = LEFT;
+		oObjInfo.x = nextPosition;
+		oObjInfo.direction = LEFT;
 	}
 }
 
-VOID MoveRight(int rightBorder, int bmpWidth)
+VOID MoveRight(int rightBorder, int objWidth)
 {
-	int posLimit = rightBorder - bmpWidth;  	// the rightmost position
-	int nextPosition = ptCurPos.x + STEP_SIZE;
+	int posLimit = rightBorder - objWidth;  	// the rightmost position
+	int nextPosition = oObjInfo.x + STEP_SIZE;
 
 	if (nextPosition > posLimit)
 	{
-		ptCurPos.x = posLimit;
-		dObjDirection = LEFT;   // rebound
+		oObjInfo.x = posLimit;
+		oObjInfo.direction = LEFT;   // rebound
 	}
 	else
 	{
-		ptCurPos.x = nextPosition;
-		dObjDirection = RIGHT;
+		oObjInfo.x = nextPosition;
+		oObjInfo.direction = RIGHT;
 	}
 }
 
-VOID MoveObjectOnArrowKey(HWND hWnd, WPARAM wParam, RECT wndRect, BITMAP bm)
+VOID MoveObjectOnArrowKey(HWND hWnd, WPARAM wParam, RECT wndRect)
 {
 	int wmId = LOWORD(wParam);
 	switch (wmId)
 	{
 		case VK_DOWN:
-			MoveDown(wndRect.bottom, bm.bmHeight);
+			MoveDown(wndRect.bottom, oObjInfo.height);
 			break;
 		case VK_UP:
 			MoveUp();
@@ -465,7 +507,7 @@ VOID MoveObjectOnArrowKey(HWND hWnd, WPARAM wParam, RECT wndRect, BITMAP bm)
 			MoveLeft();
 			break;
 		case VK_RIGHT:
-			MoveRight(wndRect.right, bm.bmWidth);
+			MoveRight(wndRect.right, oObjInfo.width);
 			break;
 	}
 
