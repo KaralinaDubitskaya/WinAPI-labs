@@ -45,9 +45,11 @@ typedef struct _OBJINFO
 HINSTANCE hInst;                                // Current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // The main window class name
-HBITMAP hbmPicture = NULL;                      //todo comment
-OBJINFO oObjInfo;                               //todo comment
-BOOL bIsObjSelected = false;                    //todo comment
+HBITMAP hbmPicture = NULL;                      // A handle to the bitmap file
+OBJINFO oObjInfo;                               // Structure that contains some info about the object
+BOOL bIsObjSelected = false;                    // True if object is grabbed by the user 
+BITMAP bm;										// Structure that defines main info about the bitmap
+RECT wndRect;									// Structure that defines coordinates of the client area
 
 // The offset between coordinates of the upper-left corner of the object
 // and coordinates of mouse at the moment of clicking on the object
@@ -63,15 +65,13 @@ OBJINFO             InitializeObjInfo(FIGURE figure, DIRECTION direction, POINT 
 VOID                ChangeFigure(OBJINFO *obj, FIGURE figure, int width, int height);
 VOID                PaintObject(HDC hdc, RECT* prc);
 VOID                RecreateObject(HWND hWnd);
-
-//VOID UpdatePosition(RECT wndRect, long objHeight, long objWidth);
 VOID				MoveUp();
 VOID				MoveDown(int bottomBorder, int objHeight);
 VOID				MoveLeft();
 VOID				MoveRight(int rightBorder, int objWidth);
 VOID				MoveObjectOnArrowKey(HWND hWnd, WPARAM wParam, RECT wndRect);
 BOOL				IsMouseOverObject(POINT mousePosition, OBJINFO obj);
-VOID UpdatePosition(RECT rectWnd, POINT mousePos, OBJINFO *obj);
+VOID				UpdatePosition(RECT rectWnd, POINT mousePos, OBJINFO *obj);
 
 // The application entry point
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,          // The current instance of tha application
@@ -177,17 +177,18 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 //  PURPOSE:  Processes messages for the main window.
 //
-//  WM_CREATE   - 
-//  WM_COMMAND  - process the application menu
-//  WM_PAINT    - paint the main window
-//  WM_DESTROY  - post a quit message and return
-//
+//  WM_CREATE       - some initialization
+//  WM_COMMAND      - process the application menu
+//  WM_PAINT        - paint the main window
+//  WM_DESTROY      - post a quit message and return
+//  WM_KEYDOWN      - move the object when the arrow key is pressed
+//  WM_LBUTTONDOWN  - check if mouse is over the object
+//	WM_LBUTTONUP    - cancel the selection of the object
+//  WM_MOUSEMOVE    - calculate the current coordinates of the object if it is moved by mouse
+//  WM_MOUSEWHEEL   - calculate the current coordinates of the object if the mouse wheel is rotated
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	BITMAP bm; //todo comment
-	RECT wndRect;  //todo comment
-
     switch (message)
     {
 	case WM_CREATE:
@@ -198,36 +199,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			{
 				MessageBox(hWnd, (LPCWSTR)L"Couldn't load the specified bitmap.", (LPCWSTR)L"Error", MB_OK | MB_ICONERROR);
 			}
-			else
-			{
-				// Load the bitmap 
-				// todo why??
-				GetObject(hbmPicture, sizeof(bm), &bm);
-			}
 
+			// At the beginning the object will be an ellipse
 			oObjInfo = InitializeObjInfo(ELLIPSE, NONE, { 0, 0 }, ELLIPSE_WIDTH, ELLIPSE_HEIGHT);
-
-			// The timer posts WM_TIMER message to the aplication queue in TIMER_INTERVAL milliseconds
-			/*UINT retValue = SetTimer(hWnd, IDT_TIMER, TIMER_INTERVAL, NULL);
-			if (retValue == 0)
-			{
-				MessageBox(hWnd, (LPCWSTR)L"Couldn't set timer.", (LPCWSTR)L"Error", MB_OK | MB_ICONERROR);
-			}*/
 		}
 		break;
     case WM_COMMAND:
         {
             int wmId = LOWORD(wParam);
+
             // Parse the menu selections:
             switch (wmId)
             {
 			case IDM_ELLIPSE:
 				ChangeFigure(&oObjInfo, ELLIPSE, ELLIPSE_WIDTH, ELLIPSE_HEIGHT);
-				RecreateObject(hWnd);  //todo comment
+				RecreateObject(hWnd);  
 				break;
 			case IDM_RECT:
 				ChangeFigure(&oObjInfo, RECTANGLE, RECTANGLE_WIDTH, RECTANGLE_HEIGHT);
-				RecreateObject(hWnd);  //todo comment
+				RecreateObject(hWnd);  
 				break;
 			case IDM_PICTURE:
 				GetObject(hbmPicture, sizeof(bm), &bm);
@@ -261,24 +251,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             EndPaint(hWnd, &ps);
         }
         break;
-	//case WM_TIMER:
-	//	{
-	//		// The window's coordinates
-	//		RECT rectWindow;
-	//		// Device context handler
-	//		HDC hdc = GetDC(hWnd);
-
-	//		// Retrieve the coordinates of the window's client area
-	//		GetClientRect(hWnd, &rectWindow);
-
-	//		//todo  comment
-	//		UpdatePosition(rectWindow, bm);
-
-	//		// Redraw the specified area
-	//		PaintObject(hdc, &rectWindow);
-	//		ReleaseDC(hWnd, hdc);
-	//	}
-	//	break;
 	case WM_KEYDOWN: 
 		{
 			GetObject(hbmPicture, sizeof(BITMAP), &bm);
@@ -330,6 +302,36 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			UpdatePosition(wndRect, { x,y }, &oObjInfo);
 			RecreateObject(hWnd);
 		}
+	}
+	break;
+	case WM_MOUSEWHEEL:
+	{
+		GetObject(hbmPicture, sizeof(BITMAP), &bm);
+		GetClientRect(hWnd, &wndRect);
+
+		// Indicates which keys are down
+		int keys = GET_KEYSTATE_WPARAM(wParam);
+
+		// Positive value indicates that the wheel was rotated 
+		// away from the user, negative - toward the user
+		int delta = GET_WHEEL_DELTA_WPARAM(wParam);
+
+		if (keys == MK_SHIFT)
+		{
+			if (delta > 0)
+				MoveRight(wndRect.right, oObjInfo.width);
+			else if (delta < 0)
+				MoveLeft();
+		}
+		else
+		{
+			if (delta > 0)
+				MoveUp();
+			else if (delta < 0)
+				MoveDown(wndRect.bottom, oObjInfo.height);
+		}
+
+		RecreateObject(hWnd);
 	}
 	break;
     case WM_DESTROY:
@@ -385,14 +387,13 @@ VOID ChangeFigure(OBJINFO *obj, FIGURE figure, int width, int height)
 	(*obj).width = width;
 }
 
-//todo comment
+//Invalidate the whole window
 VOID RecreateObject(HWND hWnd)
 {
 	// Set the whole window to be redrawn when the next WM_PAINT message occurs
 	InvalidateRect(hWnd, NULL, TRUE);
 }
 
-//todo comment
 VOID PaintObject(HDC hdc, RECT* prc)
 {
 	HBRUSH hBrush, hOldBrush;
@@ -430,55 +431,24 @@ VOID PaintObject(HDC hdc, RECT* prc)
 			break;
 
 		case PICTURE:
-			BITMAP bmp;
-			//todo whyyy
-			GetObject(hbmPicture, sizeof(BITMAP), &bmp);
+			GetObject(hbmPicture, sizeof(BITMAP), &bm);
+			// Create a memory device context compatible with the specified device
+			HDC hDC = CreateCompatibleDC(hdc);
+			// Select the bitmap
+			HBITMAP hPrevBmp = (HBITMAP)SelectObject(hDC, hbmPicture);
 
-			//todo comment
-			HDC hMemDC = CreateCompatibleDC(hdc);
-			//todo comment
-			HBITMAP hPrevBmp = (HBITMAP)SelectObject(hMemDC, hbmPicture);
 			// Transfer the picure to the device context 
-			TransparentBlt(hdc, oObjInfo.x, oObjInfo.y, bmp.bmWidth, bmp.bmHeight,
-				hMemDC, 0, 0, bmp.bmWidth, bmp.bmHeight, MASK);
+			TransparentBlt(hdc, oObjInfo.x, oObjInfo.y, bm.bmWidth, bm.bmHeight,
+				hDC, 0, 0, bm.bmWidth, bm.bmHeight, MASK);
 
-			SelectObject(hMemDC, hPrevBmp);
-			DeleteDC(hMemDC);
+			SelectObject(hDC, hPrevBmp);
+			DeleteDC(hDC);
 			DeleteObject(hPrevBmp);
 
 			break;
 	}
 }
 
-//todo comment
-//VOID UpdatePosition(RECT wndRect, long objHeight, long objWidth)
-//{
-//	switch (dObjDirection)
-//	{
-//		case UP:
-//		{
-//			MoveUp();
-//			break;
-//		}
-//		case LEFT:
-//		{
-//			MoveLeft();
-//			break;
-//		}
-//		case DOWN:
-//		{
-//			MoveDown(wndRect.bottom, objHeight);
-//			break;
-//		}
-//		case RIGHT:
-//		{
-//			MoveRight(wndRect.right, objWidth);
-//			break;
-//		}
-//	}
-//}
-
-//todo commnet
 BOOL IsMouseOverObject(POINT mousePosition, OBJINFO obj)
 {
 	return ((mousePosition.x < obj.x + obj.width) && (mousePosition.x > obj.x)
@@ -589,7 +559,5 @@ VOID MoveObjectOnArrowKey(HWND hWnd, WPARAM wParam, RECT wndRect)
 			MoveRight(wndRect.right, oObjInfo.width);
 			break;
 	}
-
-	//todo comment
 	InvalidateRect(hWnd, NULL, TRUE);
 }
