@@ -6,6 +6,8 @@
 #include <Commdlg.h>
 
 #define MAX_LOADSTRING 100
+#define ID_EDIT 1
+#define ID_BUTTON 2
 
 // Global Variables:
 HINSTANCE hInst;                                // Current instance
@@ -18,7 +20,8 @@ ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
-VOID GetUserFileName(HWND hWnd, WCHAR szFileName[]);
+INT_PTR CALLBACK	Edit(HWND, UINT, WPARAM, LPARAM);
+VOID			    GetUserFileName(HWND, WCHAR []);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -126,6 +129,9 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+	HWND hWndEdit = NULL;
+	HWND hWndButton;
+
     switch (message)
     {
     case WM_COMMAND:
@@ -135,9 +141,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             switch (wmId)
             {
 			case IDM_OPEN:
-				// Show open file dialog and return the file name 
-				GetUserFileName(hWnd, szFileName);
-				MessageBox(hWnd, szFileName, NULL, MB_OK);
+				{
+					// Show open file dialog and return the file name 
+					GetUserFileName(hWnd, szFileName);
+					//todo comment
+					/*hWndEdit = CreateWindowW(L"Edit", L"3",
+						WS_CHILD | WS_VISIBLE | WS_BORDER,
+						50, 50, 150, 20,
+						hWnd, (HMENU)ID_EDIT, NULL, NULL);
+
+					hWndButton = CreateWindowW(L"button", L"OK",
+						WS_CHILD | WS_VISIBLE,
+						50, 100, 80, 25,
+						hWnd, (HMENU)ID_BUTTON, NULL, NULL);*/
+
+					DialogBox(hInst, MAKEINTRESOURCE(IDD_EDITBOX), hWnd, Edit);
+				}
 				break;
             case IDM_ABOUT:
                 DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
@@ -148,6 +167,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             default:
                 return DefWindowProc(hWnd, message, wParam, lParam);
             }
+			
+			/*if (HIWORD(wParam) == BN_CLICKED)
+			{
+				int len = GetWindowTextLengthW(hWndEdit) + 1;
+				wchar_t text[10];
+
+				ZeroMemory(text, 10 * sizeof(wchar_t));
+
+				GetWindowTextW(hWndEdit, text, len);
+				MessageBox(hWnd, text, NULL, MB_OK);
+			}*/
         }
         break;
     case WM_PAINT:
@@ -187,6 +217,28 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     return (INT_PTR)FALSE;
 }
 
+// Message handler for edit box.
+INT_PTR CALLBACK Edit(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	WCHAR lpstrColums;
+
+	UNREFERENCED_PARAMETER(lParam);
+	switch (message)
+	{
+	case WM_INITDIALOG:
+		return (INT_PTR)TRUE;
+
+	case WM_COMMAND:
+		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
+		{
+			EndDialog(hDlg, LOWORD(wParam));
+			return (INT_PTR)TRUE;
+		}
+		break;
+	}
+	return (INT_PTR)FALSE;
+}
+
 // Show the open file dialog box and put the file name to the szFileName parameter 
 VOID GetUserFileName(HWND hWnd, WCHAR szFileName[])
 {
@@ -212,3 +264,4 @@ VOID GetUserFileName(HWND hWnd, WCHAR szFileName[])
 	// Copy the file name to the szFileName
 	wcscpy_s(szFileName, wcslen(szFile) + 1, szFile);
 }
+

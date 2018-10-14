@@ -8,6 +8,7 @@
 #define IDR_MAINFRAME			128
 #define IDD_LAB2_DIALOG	102
 #define IDD_ABOUTBOX			103
+#define IDD_EDITBOX    		    110
 #define IDM_ABOUT				104
 #define IDM_OPEN				106
 #define IDM_EXIT				105
@@ -17,6 +18,7 @@
 #define IDC_MYICON				2
 #ifndef IDC_STATIC
 #define IDC_STATIC				-1
+#define IDEDIT                  111
 #endif
 // Next default values for new objects
 //
