@@ -18,5 +18,9 @@
 #include <tchar.h>
 
 
-// TODO: reference additional headers your program requires here
+// References to additional headers 
 #include <Commdlg.h>
+#include <vector>
+#include <cstring>
+#include <string>
+#include <fstream>

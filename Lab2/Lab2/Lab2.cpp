@@ -5,15 +5,21 @@
 #include "Lab2.h"
 
 #define MAX_LOADSTRING 100
-#define ID_EDIT 1
-#define ID_BUTTON 2
+
+typedef std::vector<std::string> StringVector;
+typedef std::vector<StringVector> StringTable;
+typedef struct _TABLE
+{
+	INT numOfColums = 0;                           // Number of colums in the table
+	StringTable text;    // "Two-dimensional array" of strings to be dispalayed as a table 
+} TABLE;
 
 // Global Variables:
 HINSTANCE hInst;                                // Current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // The main window class name
 WCHAR szFileName[MAX_LOADSTRING];               // Name of the file with strings to be showed in the table
-INT numOfColums = 0;                            // Number of colums in the table
+TABLE table;                                    // Struct that contains all info about table
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -22,6 +28,7 @@ LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK	Edit(HWND, UINT, WPARAM, LPARAM);
 VOID			    GetUserFileName(HWND, WCHAR []);
+BOOL				LoadTextFromFile(WCHAR szFileName[], StringTable *table, int numOfColumns);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -144,18 +151,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				{
 					// Show open file dialog and return the file name 
 					GetUserFileName(hWnd, szFileName);
-					//todo comment
-					/*hWndEdit = CreateWindowW(L"Edit", L"3",
-						WS_CHILD | WS_VISIBLE | WS_BORDER,
-						50, 50, 150, 20,
-						hWnd, (HMENU)ID_EDIT, NULL, NULL);
-
-					hWndButton = CreateWindowW(L"button", L"OK",
-						WS_CHILD | WS_VISIBLE,
-						50, 100, 80, 25,
-						hWnd, (HMENU)ID_BUTTON, NULL, NULL);*/
-
+					// Show the edit dialog for entering the number of columns in the table
 					DialogBox(hInst, MAKEINTRESOURCE(IDD_EDITBOX), hWnd, Edit);
+					// Load lines from the file to the table.text
+					LoadTextFromFile(szFileName, &(table.text), table.numOfColums);
 				}
 				break;
             case IDM_ABOUT:
@@ -167,17 +166,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             default:
                 return DefWindowProc(hWnd, message, wParam, lParam);
             }
-			
-			/*if (HIWORD(wParam) == BN_CLICKED)
-			{
-				int len = GetWindowTextLengthW(hWndEdit) + 1;
-				wchar_t text[10];
-
-				ZeroMemory(text, 10 * sizeof(wchar_t));
-
-				GetWindowTextW(hWndEdit, text, len);
-				MessageBox(hWnd, text, NULL, MB_OK);
-			}*/
         }
         break;
     case WM_PAINT:
@@ -197,7 +185,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
-// Message handler for about box.
+// Message handler for about box
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
     UNREFERENCED_PARAMETER(lParam);
@@ -220,7 +208,9 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 // Message handler for edit box
 INT_PTR CALLBACK Edit(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	WCHAR lpstrColums[3];   //todo magic number
+	// String which contains entered string
+	WCHAR lpstrColums[3];   
+	// Number of entered characters
 	WORD cchColums;
 
 	UNREFERENCED_PARAMETER(lParam);
@@ -230,7 +220,7 @@ INT_PTR CALLBACK Edit(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 		return (INT_PTR)TRUE;
 
 	case WM_COMMAND:
-		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
+		if (LOWORD(wParam) == IDOK)
 		{
 			// Get number of characters
 			cchColums = (WORD)SendDlgItemMessage(hDlg, IDEDIT, EM_LINELENGTH, (WPARAM)0, (LPARAM)0);
@@ -259,10 +249,10 @@ INT_PTR CALLBACK Edit(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 			lpstrColums[cchColums] = 0;
 			
 			// Convert string with number of colums to int value
-			numOfColums = _wtoi(lpstrColums);
+			table.numOfColums = _wtoi(lpstrColums);
 
 			// Check the conversion result
-			if (numOfColums == 0)
+			if (table.numOfColums == 0)
 			{
 				MessageBox(hDlg, L"Invalid input.", L"Error", MB_OK);
 				EndDialog(hDlg, TRUE);
@@ -301,5 +291,43 @@ VOID GetUserFileName(HWND hWnd, WCHAR szFileName[])
 	GetOpenFileName(&ofn);
 	// Copy the file name to the szFileName
 	wcscpy_s(szFileName, wcslen(szFile) + 1, szFile);
+}
+
+// Read the text file and put it's lines to the StringTable
+BOOL LoadTextFromFile(WCHAR szFileName[], StringTable *table, int numOfColumns)
+{
+	// Convert wchar_t* to std::string
+	std::wstring ws(szFileName);
+	std::string fileName(ws.begin(), ws.end());
+
+	// Create internal file stream
+	std::ifstream fin(fileName.c_str());
+	if (!fin)
+		return false;
+
+	std::string str;
+	StringVector row;
+
+	// Read the file line by line
+	while (!fin.eof())
+	{
+		for (int i = 0; i < numOfColumns; i++)
+		{
+			// Read the next line
+			std::getline(fin, str);
+			// Add it to the row
+			row.push_back(str);
+
+			if (fin.eof()) 
+				break;
+		}
+
+		// Add row to the table text
+		(*table).push_back(row);
+		row.clear();
+	}
+
+	fin.close();
+	return true;
 }
 
