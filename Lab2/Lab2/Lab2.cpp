@@ -3,7 +3,6 @@
 
 #include "stdafx.h"
 #include "Lab2.h"
-#include <Commdlg.h>
 
 #define MAX_LOADSTRING 100
 #define ID_EDIT 1
@@ -13,7 +12,8 @@
 HINSTANCE hInst;                                // Current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // The main window class name
-WCHAR szFileName[MAX_LOADSTRING];             // Name of the file with strings to be showed in the table
+WCHAR szFileName[MAX_LOADSTRING];               // Name of the file with strings to be showed in the table
+INT numOfColums = 0;                            // Number of colums in the table
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -217,10 +217,11 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     return (INT_PTR)FALSE;
 }
 
-// Message handler for edit box.
+// Message handler for edit box
 INT_PTR CALLBACK Edit(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	WCHAR lpstrColums;
+	WCHAR lpstrColums[3];   //todo magic number
+	WORD cchColums;
 
 	UNREFERENCED_PARAMETER(lParam);
 	switch (message)
@@ -231,6 +232,43 @@ INT_PTR CALLBACK Edit(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_COMMAND:
 		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
 		{
+			// Get number of characters
+			cchColums = (WORD)SendDlgItemMessage(hDlg, IDEDIT, EM_LINELENGTH, (WPARAM)0, (LPARAM)0);
+			
+			//  Check number of entered characters
+			if (cchColums >= 2)
+			{
+				MessageBox(hDlg, L"Too many colums.", L"Error",	MB_OK);
+				EndDialog(hDlg, TRUE);
+				return FALSE;
+			}
+			else if (cchColums == 0)
+			{
+				MessageBox(hDlg, L"No characters entered.",	L"Error", MB_OK);
+				EndDialog(hDlg, TRUE);
+				return FALSE;
+			}
+
+			// Put the number of characters into first word of buffer 
+			*((LPWORD)lpstrColums) = cchColums;
+
+			// Get the characters. The size in the first word of the lpstrColumns is overwritten by the copied line
+			SendDlgItemMessage(hDlg, IDEDIT, EM_GETLINE, (WPARAM)0,	(LPARAM)lpstrColums);
+
+			// Null-terminate the string 
+			lpstrColums[cchColums] = 0;
+			
+			// Convert string with number of colums to int value
+			numOfColums = _wtoi(lpstrColums);
+
+			// Check the conversion result
+			if (numOfColums == 0)
+			{
+				MessageBox(hDlg, L"Invalid input.", L"Error", MB_OK);
+				EndDialog(hDlg, TRUE);
+				return FALSE;
+			}
+
 			EndDialog(hDlg, LOWORD(wParam));
 			return (INT_PTR)TRUE;
 		}
