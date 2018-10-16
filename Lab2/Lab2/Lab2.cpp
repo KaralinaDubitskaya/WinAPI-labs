@@ -168,11 +168,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
 			case IDM_OPEN:
 				{
-				//todo enshure
 					// Show open file dialog and return the file name 
 					GetUserFileName(hWnd, szFileName);
 					// Show the edit dialog for entering the number of columns in the table
-					if (DialogBox(hInst, MAKEINTRESOURCE(IDD_EDITBOX), hWnd, Edit))
+					if (szFileName[0] != '\0' && DialogBox(hInst, MAKEINTRESOURCE(IDD_EDITBOX), hWnd, Edit))
 					{
 						// Load lines from the file to the table.text
 						table.numOfRows = LoadTextFromFile(szFileName, &(table.text), table.numOfColums);
@@ -327,7 +326,7 @@ VOID GetUserFileName(HWND hWnd, WCHAR szFileName[])
 	wcscpy_s(szFileName, wcslen(szFile) + 1, szFile);
 }
 
-// Read the text file and put it's lines to the StringTable
+// Read the text file and put it's lines to the STRINGTABLE
 // Return number of rows in the table
 INT LoadTextFromFile(WCHAR szFileName[], STRINGTABLE *table, INT numOfColumns)
 {
@@ -349,13 +348,18 @@ INT LoadTextFromFile(WCHAR szFileName[], STRINGTABLE *table, INT numOfColumns)
 	{
 		for (int i = 0; i < numOfColumns; i++)
 		{
-			// Read the next line
-			std::getline(fin, str);
+			if (fin.eof())
+			{
+				// Incomplete row is supplemented with empty strings
+				str = "";
+			}
+			else
+			{
+				// Read the next line
+				std::getline(fin, str);
+			}
 			// Add it to the row
 			row.push_back(str);
-
-			if (fin.eof()) 
-				break;
 		}
 
 		// Add row to the table text
@@ -397,7 +401,6 @@ VOID DrawTable(HWND hWnd, HDC hdc, TABLE table)
 	int x = 0;
 
 	// Write text and draw horisontal lines
-	//todo why??
 	WriteText(hdc, clientRect, table, columnWidth);
 
 	// Draw vertical lines
@@ -413,6 +416,7 @@ VOID DrawTable(HWND hWnd, HDC hdc, TABLE table)
 	SelectObject(hdc, oldFont);
 }
 
+// Write text and draw horisontal lines
 VOID WriteText(HDC hdc, RECT clientRect, TABLE table, INT columnWidth)
 {
 	for (int i = 0; i < table.numOfRows; i++)
@@ -423,7 +427,6 @@ VOID WriteText(HDC hdc, RECT clientRect, TABLE table, INT columnWidth)
 
 VOID WriteRow(HDC hdc, RECT clientRect, TABLE table, INT rowIndex, INT columnWidth)
 {
-	//todo what???
 	int maxY = tableBottomY;
 
 	for (int i = 0; i < table.numOfColums; i++)
@@ -445,7 +448,6 @@ VOID WriteRow(HDC hdc, RECT clientRect, TABLE table, INT rowIndex, INT columnWid
 			int y = tableBottomY - scrolledWidth + INDENT;
 			TextOut(hdc, x, y, str.c_str(), str.length());
 			// Set new bottom coordinate
-			//todo what
 			if (tableBottomY + textSize.cy > maxY)
 				maxY = tableBottomY + textSize.cy;
 		}
@@ -472,8 +474,8 @@ VOID WriteRow(HDC hdc, RECT clientRect, TABLE table, INT rowIndex, INT columnWid
 					restStr = str.substr(substrLen, strLength);
 					GetTextExtentPoint32(hdc, substr.c_str(), substrLen, &stringSize);
 					restWidth = strWidth - stringSize.cx;
-
 					TextOut(hdc, columnWidth * i + INDENT, y - scrolledWidth, substr.c_str(), substr.length());
+
 					y += stringSize.cy + INDENT;
 					str = restStr;
 					strLength = str.length();
@@ -481,27 +483,24 @@ VOID WriteRow(HDC hdc, RECT clientRect, TABLE table, INT rowIndex, INT columnWid
 				}
 			} while (restWidth > columnWidth - 2 * INDENT);
 
+			// Print rest of the string
 			if (restWidth > 0)
-			{
 				TextOut(hdc, columnWidth * i + INDENT, y - scrolledWidth, str.c_str(), str.length());
-			}
 
+			// Set new bottom coordinate
 			if (y + stringSize.cy > maxY) 
-			{
 				maxY = y + stringSize.cy;
-			}
 		}
 	}
 
 	tableBottomY = maxY + INDENT;
 
 	// Draw horizontal line
-	//todo ???
 	MoveToEx(hdc, clientRect.left, tableBottomY - scrolledWidth, NULL);
 	LineTo(hdc, clientRect.right, tableBottomY - scrolledWidth);
 }
 
-//todo comment method
+// Return number of chars in one line in the column
 INT GetNumOfCharsToWrite(HDC hdc, INT columnWidth, std::wstring str)
 {
 	SIZE stringSize;
@@ -509,14 +508,13 @@ INT GetNumOfCharsToWrite(HDC hdc, INT columnWidth, std::wstring str)
 	std::wstring substr = str.substr(0, charCount);
 	GetTextExtentPoint32(hdc, substr.c_str(), substr.length(), &stringSize);
 
-	//todo try without it
+	// Correct charCount value
 	while (stringSize.cx < columnWidth - 2 * INDENT && charCount < str.length())
 	{
 		charCount++;
 		substr = str.substr(0, charCount);
 		GetTextExtentPoint32(hdc, substr.c_str(), substr.length(), &stringSize);
 	}
-
 	while (stringSize.cx > columnWidth - 2 * INDENT)
 	{
 		charCount--;
@@ -524,11 +522,13 @@ INT GetNumOfCharsToWrite(HDC hdc, INT columnWidth, std::wstring str)
 		GetTextExtentPoint32(hdc, substr.c_str(), substr.length(), &stringSize);
 	}
 
-	//todo whyyyy???
+	// At least 1 character must be placed in the line
 	if (charCount == 0) return 1;
+
 	return charCount;
 }
 
+// Set the window to be redrawn
 VOID UpdateTable(HWND hWnd)
 {
 	tableBottomY = 0;
