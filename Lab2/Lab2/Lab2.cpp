@@ -46,6 +46,7 @@ VOID WriteText(HDC hdc, RECT clientRect, TABLE table, INT columnWidth);
 VOID WriteRow(HDC hdc, RECT clientRect, TABLE table, int rowIndex, int columnWidth);
 INT GetNumOfCharsToWrite(HDC hdc, int columnWidth, std::wstring str);
 VOID UpdateTable(HWND hWnd);
+BOOL IsScrolling(HWND hWnd, WPARAM wParam);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -202,6 +203,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		if (wParam != SIZE_MINIMIZED)
 		{
 			scrolledY = 0;
+			UpdateTable(hWnd);
+		}
+		break;
+	case WM_MOUSEWHEEL:
+		if (IsScrolling(hWnd, wParam))
+		{
 			UpdateTable(hWnd);
 		}
 		break;
@@ -520,4 +527,42 @@ VOID UpdateTable(HWND hWnd)
 {
 	tableBottomY = 0;
 	InvalidateRect(hWnd, NULL, TRUE);
+}
+
+// Checks whether the table needs to be redrawn if the user rotates the mouse wheel
+BOOL IsScrolling(HWND hWnd, WPARAM wParam)
+{
+	// Contain dimentions of the window
+	RECT clientRect;
+	GetClientRect(hWnd, &clientRect);
+
+	// Indicates the amount that the mouse wheel has changed
+	SHORT delta = GET_WHEEL_DELTA_WPARAM(wParam);
+
+	// The table is shorter than the window
+	if (tableBottomY < clientRect.bottom)
+		return false;
+
+	// User is scrolling up but it's the upper position of the table
+	if (scrolledY == 0 && delta > 0)
+		return false;
+
+	// The bottom border of the table coincides with the bottom border of the window 
+	// and the user is scrolling the mouse wheel up
+	if (scrolledY + clientRect.bottom == tableBottomY && delta < 0)
+		return false;
+
+	// Reached the bottom border of the table
+	if (scrolledY + clientRect.bottom - delta >= tableBottomY && delta < 0)
+	{
+		scrolledY = tableBottomY - clientRect.bottom;
+		return true;
+	}
+
+	// If the user is scrolling down, delta is negative
+	scrolledY += (-delta);
+	// Correct the value of scrolledY
+	scrolledY = (scrolledY > 0) ? scrolledY : 0;
+
+	return true;
 }
