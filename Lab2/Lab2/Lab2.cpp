@@ -8,19 +8,20 @@
 
 #define PEN_STYLE PS_SOLID
 #define PEN_WIDTH 2
-#define PEN_COLOR RGB(0,0,0)
+#define PEN_COLOR 0x000000
 
-#define CHAR_WIDTH 20
+#define CHAR_WIDTH 10
 #define CHAR_HEIGHT 20
 #define INDENT 5
 
-typedef std::vector<std::string> StringVector;
-typedef std::vector<StringVector> StringTable;
+typedef std::vector<std::string> STRINGVECTOR;
+typedef std::vector<STRINGVECTOR> STRINGTABLE;
+
 typedef struct _TABLE
 {
 	INT numOfColums = 0; // Number of colums in the table
 	INT numOfRows = 0;   // Number of rows in the table
-	StringTable text;    // "Two-dimensional array" of strings to be dispalayed as a table 
+	STRINGTABLE text;    // "Two-dimensional array" of strings to be dispalayed as a table 
 } TABLE;
 
 // Global Variables:
@@ -30,23 +31,24 @@ WCHAR szWindowClass[MAX_LOADSTRING];            // The main window class name
 WCHAR szFileName[MAX_LOADSTRING];               // Name of the file with strings to be showed in the table
 TABLE table;                                    // Struct that contains all info about table
 
-INT scrolledY = 0;      // Y coordinate after scrolling
-INT tableBottomY = 0;   // Last y coordinate of the table
+INT scrolledWidth = 0;      // Width of the scrolled part of the table
+INT tableBottomY = 0;       // Y coordinate of the table's bottom border
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
-BOOL                InitInstance(HINSTANCE, int);
+BOOL                InitInstance(HINSTANCE, INT);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK	Edit(HWND, UINT, WPARAM, LPARAM);
 VOID			    GetUserFileName(HWND, WCHAR []);
-BOOL				LoadTextFromFile(WCHAR szFileName[], StringTable *table, int numOfColumns);
-VOID DrawTable(HWND hWnd, HDC hdc, TABLE table);
-VOID WriteText(HDC hdc, RECT clientRect, TABLE table, INT columnWidth);
-VOID WriteRow(HDC hdc, RECT clientRect, TABLE table, int rowIndex, int columnWidth);
-INT GetNumOfCharsToWrite(HDC hdc, int columnWidth, std::wstring str);
-VOID UpdateTable(HWND hWnd);
-BOOL IsScrolling(HWND hWnd, WPARAM wParam);
+BOOL				LoadTextFromFile(WCHAR szFileName[], STRINGTABLE *table, INT numOfColumns);
+VOID				DrawTable(HWND hWnd, HDC hdc, TABLE table);
+VOID				WriteText(HDC hdc, RECT clientRect, TABLE table, INT columnWidth);
+VOID				WriteRow(HDC hdc, RECT clientRect, TABLE table, INT rowIndex, INT columnWidth);
+VOID				RefreshWindow(HWND hWnd);
+INT					GetNumOfCharsToWrite(HDC hdc, INT columnWidth, std::wstring str);
+BOOL				IsScrolling(HWND hWnd, WPARAM wParam);
+VOID				UpdateTable(HWND hWnd);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -55,8 +57,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
-
-    // TODO: Place code here.
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -147,10 +147,11 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 //  PURPOSE:  Processes messages for the main window.
 //
-//  WM_COMMAND  - process the application menu
-//  WM_PAINT    - Paint the main window
-//  WM_DESTROY  - post a quit message and return
-//
+//  WM_COMMAND    - process the application menu
+//  WM_PAINT      - Paint the main window
+//  WM_DESTROY    - post a quit message and return
+//	WM_SIZE       - redraw table if it's necessary when size of the window changes
+//  WM_MOUSEWHELL - redraw table on scrolling 
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -167,16 +168,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
 			case IDM_OPEN:
 				{
+				//todo enshure
 					// Show open file dialog and return the file name 
 					GetUserFileName(hWnd, szFileName);
 					// Show the edit dialog for entering the number of columns in the table
-					DialogBox(hInst, MAKEINTRESOURCE(IDD_EDITBOX), hWnd, Edit);
-					// Load lines from the file to the table.text
-					table.numOfRows = LoadTextFromFile(szFileName, &(table.text), table.numOfColums);
-
-					RECT clientRect;
-					GetClientRect(hWnd, &clientRect);
-					InvalidateRect(hWnd, &clientRect, TRUE);
+					if (DialogBox(hInst, MAKEINTRESOURCE(IDD_EDITBOX), hWnd, Edit))
+					{
+						// Load lines from the file to the table.text
+						table.numOfRows = LoadTextFromFile(szFileName, &(table.text), table.numOfColums);
+						RefreshWindow(hWnd);
+					}
 				}
 				break;
             case IDM_ABOUT:
@@ -202,7 +203,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_SIZE:
 		if (wParam != SIZE_MINIMIZED)
 		{
-			scrolledY = 0;
+			scrolledWidth = 0;
 			UpdateTable(hWnd);
 		}
 		break;
@@ -244,7 +245,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 // Message handler for edit box
 INT_PTR CALLBACK Edit(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	// String which contains entered string
+	// Entered string
 	WCHAR lpstrColums[3];   
 	// Number of entered characters
 	WORD cchColums;
@@ -264,15 +265,13 @@ INT_PTR CALLBACK Edit(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 			//  Check number of entered characters
 			if (cchColums >= 2)
 			{
-				MessageBox(hDlg, L"Too many colums.", L"Error",	MB_OK);
-				EndDialog(hDlg, TRUE);
-				return FALSE;
+				MessageBox(hDlg, L"Too many colums. Try again.", L"Error",	MB_OK);
+				return (INT_PTR)FALSE;
 			}
 			else if (cchColums == 0)
 			{
-				MessageBox(hDlg, L"No characters entered.",	L"Error", MB_OK);
-				EndDialog(hDlg, TRUE);
-				return FALSE;
+				MessageBox(hDlg, L"No characters entered. Try again.",	L"Error", MB_OK);
+				return (INT_PTR)FALSE;
 			}
 
 			// Put the number of characters into first word of buffer 
@@ -290,9 +289,8 @@ INT_PTR CALLBACK Edit(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 			// Check the conversion result
 			if (table.numOfColums == 0)
 			{
-				MessageBox(hDlg, L"Invalid input.", L"Error", MB_OK);
-				EndDialog(hDlg, TRUE);
-				return FALSE;
+				MessageBox(hDlg, L"Invalid input. Try again.", L"Error", MB_OK);
+				return (INT_PTR)FALSE;
 			}
 
 			EndDialog(hDlg, LOWORD(wParam));
@@ -313,11 +311,11 @@ VOID GetUserFileName(HWND hWnd, WCHAR szFileName[])
 
 	ofn.lStructSize = sizeof(ofn);
 	ofn.hwndOwner = hWnd;
-	ofn.lpstrFile = szFile;
+	ofn.lpstrFile = szFile; // name of the selected file
 	ofn.lpstrFile[0] = '\0';
-	ofn.nMaxFile = sizeof(szFile);
+	ofn.nMaxFile = sizeof(szFile); // max lenght of the file name
 	ofn.lpstrFilter = L"Text\0*.txt\0"; // only text files
-	ofn.nFilterIndex = 1;
+	ofn.nFilterIndex = 1;  // text files
 	ofn.lpstrFileTitle = NULL;
 	ofn.nMaxFileTitle = 0;
 	ofn.lpstrInitialDir = NULL;
@@ -331,7 +329,7 @@ VOID GetUserFileName(HWND hWnd, WCHAR szFileName[])
 
 // Read the text file and put it's lines to the StringTable
 // Return number of rows in the table
-INT LoadTextFromFile(WCHAR szFileName[], StringTable *table, int numOfColumns)
+INT LoadTextFromFile(WCHAR szFileName[], STRINGTABLE *table, INT numOfColumns)
 {
 	// Convert wchar_t* to std::string
 	std::wstring ws(szFileName);
@@ -343,7 +341,7 @@ INT LoadTextFromFile(WCHAR szFileName[], StringTable *table, int numOfColumns)
 		return false;
 
 	std::string str;
-	StringVector row;
+	STRINGVECTOR row;
 	INT rowsCount = 0;     
 
 	// Read the file line by line
@@ -368,6 +366,14 @@ INT LoadTextFromFile(WCHAR szFileName[], StringTable *table, int numOfColumns)
 
 	fin.close();
 	return rowsCount;
+}
+
+// Set the window to be redrawn
+VOID RefreshWindow(HWND hWnd)
+{
+	RECT clientRect;
+	GetClientRect(hWnd, &clientRect);
+	InvalidateRect(hWnd, &clientRect, TRUE);
 }
 
 VOID DrawTable(HWND hWnd, HDC hdc, TABLE table)
@@ -415,7 +421,7 @@ VOID WriteText(HDC hdc, RECT clientRect, TABLE table, INT columnWidth)
 	}
 }
 
-VOID WriteRow(HDC hdc, RECT clientRect, TABLE table, int rowIndex, int columnWidth)
+VOID WriteRow(HDC hdc, RECT clientRect, TABLE table, INT rowIndex, INT columnWidth)
 {
 	//todo what???
 	int maxY = tableBottomY;
@@ -436,7 +442,7 @@ VOID WriteRow(HDC hdc, RECT clientRect, TABLE table, int rowIndex, int columnWid
 		{
 			// Write the string to the specified coordinates
 			int x = columnWidth * i + INDENT;
-			int y = tableBottomY - scrolledY + INDENT;
+			int y = tableBottomY - scrolledWidth + INDENT;
 			TextOut(hdc, x, y, str.c_str(), str.length());
 			// Set new bottom coordinate
 			//todo what
@@ -467,7 +473,7 @@ VOID WriteRow(HDC hdc, RECT clientRect, TABLE table, int rowIndex, int columnWid
 					GetTextExtentPoint32(hdc, substr.c_str(), substrLen, &stringSize);
 					restWidth = strWidth - stringSize.cx;
 
-					TextOut(hdc, columnWidth * i + INDENT, y - scrolledY, substr.c_str(), substr.length());
+					TextOut(hdc, columnWidth * i + INDENT, y - scrolledWidth, substr.c_str(), substr.length());
 					y += stringSize.cy + INDENT;
 					str = restStr;
 					strLength = str.length();
@@ -477,7 +483,7 @@ VOID WriteRow(HDC hdc, RECT clientRect, TABLE table, int rowIndex, int columnWid
 
 			if (restWidth > 0)
 			{
-				TextOut(hdc, columnWidth * i + INDENT, y - scrolledY, str.c_str(), str.length());
+				TextOut(hdc, columnWidth * i + INDENT, y - scrolledWidth, str.c_str(), str.length());
 			}
 
 			if (y + stringSize.cy > maxY) 
@@ -491,15 +497,15 @@ VOID WriteRow(HDC hdc, RECT clientRect, TABLE table, int rowIndex, int columnWid
 
 	// Draw horizontal line
 	//todo ???
-	MoveToEx(hdc, clientRect.left, tableBottomY - scrolledY, NULL);
-	LineTo(hdc, clientRect.right, tableBottomY - scrolledY);
+	MoveToEx(hdc, clientRect.left, tableBottomY - scrolledWidth, NULL);
+	LineTo(hdc, clientRect.right, tableBottomY - scrolledWidth);
 }
 
 //todo comment method
-INT GetNumOfCharsToWrite(HDC hdc, int columnWidth, std::wstring str)
+INT GetNumOfCharsToWrite(HDC hdc, INT columnWidth, std::wstring str)
 {
 	SIZE stringSize;
-	int charCount = (columnWidth - 2 * INDENT) / CHAR_WIDTH;
+	INT charCount = (columnWidth - 2 * INDENT) / CHAR_WIDTH;
 	std::wstring substr = str.substr(0, charCount);
 	GetTextExtentPoint32(hdc, substr.c_str(), substr.length(), &stringSize);
 
@@ -544,25 +550,25 @@ BOOL IsScrolling(HWND hWnd, WPARAM wParam)
 		return false;
 
 	// User is scrolling up but it's the upper position of the table
-	if (scrolledY == 0 && delta > 0)
+	if (scrolledWidth == 0 && delta > 0)
 		return false;
 
 	// The bottom border of the table coincides with the bottom border of the window 
 	// and the user is scrolling the mouse wheel up
-	if (scrolledY + clientRect.bottom == tableBottomY && delta < 0)
+	if (scrolledWidth + clientRect.bottom == tableBottomY && delta < 0)
 		return false;
 
 	// Reached the bottom border of the table
-	if (scrolledY + clientRect.bottom - delta >= tableBottomY && delta < 0)
+	if (scrolledWidth + clientRect.bottom - delta >= tableBottomY && delta < 0)
 	{
-		scrolledY = tableBottomY - clientRect.bottom;
+		scrolledWidth = tableBottomY - clientRect.bottom;
 		return true;
 	}
 
 	// If the user is scrolling down, delta is negative
-	scrolledY += (-delta);
+	scrolledWidth += (-delta);
 	// Correct the value of scrolledY
-	scrolledY = (scrolledY > 0) ? scrolledY : 0;
+	scrolledWidth = (scrolledWidth > 0) ? scrolledWidth : 0;
 
 	return true;
 }
