@@ -45,6 +45,7 @@ VOID DrawTable(HWND hWnd, HDC hdc, TABLE table);
 VOID WriteText(HDC hdc, RECT clientRect, TABLE table, INT columnWidth);
 VOID WriteRow(HDC hdc, RECT clientRect, TABLE table, int rowIndex, int columnWidth);
 INT GetNumOfCharsToWrite(HDC hdc, int columnWidth, std::wstring str);
+VOID UpdateTable(HWND hWnd);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -197,6 +198,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             EndPaint(hWnd, &ps);
         }
         break;
+	case WM_SIZE:
+		if (wParam != SIZE_MINIMIZED)
+		{
+			scrolledY = 0;
+			UpdateTable(hWnd);
+		}
+		break;
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
@@ -506,4 +514,10 @@ INT GetNumOfCharsToWrite(HDC hdc, int columnWidth, std::wstring str)
 	//todo whyyyy???
 	if (charCount == 0) return 1;
 	return charCount;
+}
+
+VOID UpdateTable(HWND hWnd)
+{
+	tableBottomY = 0;
+	InvalidateRect(hWnd, NULL, TRUE);
 }
