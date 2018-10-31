@@ -18,16 +18,38 @@ int main()
 	std::cout << "Enter string by which replace:\n";
 	std::cin >> newStr;
 
-	if (oldStr.length() != newStr.length())
+	int oldStrLen = oldStr.length();
+	int newStrLen = newStr.length();
+
+	if (oldStrLen < newStrLen)
 	{
-		std::cout << "Error: Length of the strings should be equal.\n";
+		std::cout << "Error: Length of the new string shouldn't be greater than length of the previous one.\n";
 		getchar();
 		return 1;
 	}
+	else
+	{
+		if (oldStrLen > newStrLen)
+		{
+			std::string spaces;
+			for (int i = 0; i < oldStrLen - newStrLen; i++)
+			{
+				spaces.append(" ");
+			}
+			newStr.append(spaces);
+		}
+	}
 
-	ReplaceStringInVirtualMemory(oldStr.c_str, newStr.c_str, pid);
-	std::cout << "String was replaced successfully.\n";
+	if (ReplaceStringInVirtualMemory(oldStr.c_str(), newStr.c_str(), pid))
+	{
+		std::cout << "String has been replaced successfully.\n";
+	}
+	else
+	{
+		std::cout << "Error: Cannot replace the string.\n";
+	}
 
+	getchar();
 	getchar();
 
 	return 0;
