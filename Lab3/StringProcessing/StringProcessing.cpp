@@ -7,12 +7,71 @@
 
 void ReplaceString(HANDLE hProc, LPVOID lpAddress, PBYTE pSource,
 	INT buffSize, const char *oldStr, const char *newStr);
-BOOL ReplaceStringInVirtualMemory(const char *oldStr, const char *newStr, DWORD pid);
+BOOL WINAPI ReplaceStringInVirtualMemory(const char *oldStr, const char *newStr, DWORD pid);
+BOOL WINAPI ReplaceStringInVirtualMemoryInjection(PVOID parameter);
 
 // Replace all occurences of the string (oldStr) with the new one (newStr) located in
 // the virtual memory of the specified process 
-BOOL ReplaceStringInVirtualMemory(const char *oldStr, const char *newStr, DWORD pid)
+BOOL WINAPI ReplaceStringInVirtualMemory(const char *oldStr, const char *newStr, DWORD pid)
 {
+	// Length of the new string should be equal to the old one
+	if (strlen(oldStr) != strlen(newStr)) { return false; }
+
+	// Get the process handle
+	HANDLE hProc = OpenProcess(PROCESS_ALL_ACCESS, false, pid);
+	if (hProc == NULL) { return false; }
+
+	// A pointer to the base address of the region of pages 
+	LPCVOID lpPageAddress = (LPCVOID)0;
+
+	// Info about a range of pages in the virtual memory of the process
+	MEMORY_BASIC_INFORMATION vmInfo;
+
+	while (VirtualQueryEx(hProc, lpPageAddress, &vmInfo, sizeof(vmInfo)) != 0)
+	{
+		INT numOfIterations = vmInfo.RegionSize / BUFFER_SIZE + (vmInfo.RegionSize % BUFFER_SIZE != 0 ? 1 : 0);
+		LPVOID lpAddress = vmInfo.BaseAddress;
+
+		for (int i = 0; i < numOfIterations; i++)
+		{
+			PBYTE pBuffer = new BYTE[BUFFER_SIZE];
+			SIZE_T numOfBytesRead = 0;
+			INT bufferSize = (i < numOfIterations - 1) ? BUFFER_SIZE : (vmInfo.RegionSize % BUFFER_SIZE);
+
+			ReadProcessMemory(hProc, lpAddress, pBuffer, bufferSize, &numOfBytesRead);
+			if (numOfBytesRead > 0)
+			{
+				ReplaceString(hProc, lpAddress, pBuffer, bufferSize, oldStr, newStr);
+			}
+			lpAddress = (PBYTE)lpAddress + bufferSize;
+
+			delete pBuffer;
+		}
+
+		lpPageAddress = lpAddress;
+	}
+
+	DWORD l = GetLastError();
+
+	CloseHandle(hProc);
+}
+
+// Replace all occurences of the string (oldStr) with the new one (newStr) located in
+// the virtual memory of the specified process 
+BOOL WINAPI ReplaceStringInVirtualMemoryInjection(PVOID parameter)
+{
+	struct PARAMETER {
+		std::string oldStr;
+		std::string newStr;
+		int pid;
+	};
+
+	PARAMETER *p_parameter = (PARAMETER *)parameter;
+
+	const char *oldStr = (*p_parameter).oldStr.c_str();
+	const char *newStr = (*p_parameter).newStr.c_str();
+	int pid = (*p_parameter).pid;
+
 	// Length of the new string should be equal to the old one
 	if (strlen(oldStr) != strlen(newStr)) { return false; }
 

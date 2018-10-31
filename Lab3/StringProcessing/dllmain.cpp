@@ -2,6 +2,7 @@
 #include "stdafx.h"
 
 __declspec(dllexport) BOOL WINAPI ReplaceStringInVirtualMemory(const char *oldStr, const char *newStr, DWORD pid);
+__declspec(dllexport) BOOL WINAPI ReplaceStringInVirtualMemoryInjection(PVOID parameter);
 
 BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
