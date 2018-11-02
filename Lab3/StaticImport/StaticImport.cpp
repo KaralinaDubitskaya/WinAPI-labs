@@ -3,7 +3,7 @@
 
 #include "stdafx.h"
 
-__declspec(dllimport) BOOL ReplaceStringInVirtualMemory(const char *oldStr, const char *newStr, DWORD pid);
+__declspec(dllimport) BOOL WINAPI ReplaceStringInVirtualMemory(const char *oldStr, const char *newStr, DWORD pid);
 
 int main()
 {
