@@ -1,0 +1,4 @@
+LIBRARY
+EXPORTS
+ReplaceStringInVirtualMemory=ReplaceStringInVirtualMemory
+ReplaceStringInVirtualMemoryInjection=ReplaceStringInVirtualMemoryInjection
