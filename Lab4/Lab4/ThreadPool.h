@@ -1,6 +1,6 @@
 #pragma once
 #include "Task.h"
-#include <queue>
+#include "TasksQueue.h"
 
 class ThreadPool
 {
@@ -15,7 +15,7 @@ private:
 	CONDITION_VARIABLE conditionVariable;
 	volatile BOOL isClosed;
 	HANDLE *threads;
-	std::queue<TASK*> tasks;
+	TasksQueue *tasks;
 
 	TASK* DequeueTask();
 	static DWORD WINAPI ThreadFunc(LPVOID param);
