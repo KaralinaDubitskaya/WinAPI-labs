@@ -5,8 +5,8 @@
 
 ThreadPool::ThreadPool(INT threadCount)
 {
-	InitializeCriticalSectionAndSpinCount(&lock, SPIN_COUNT);
-	InitializeConditionVariable(&conditionVariable);
+	//InitializeCriticalSectionAndSpinCount(&lock, SPIN_COUNT);
+	//InitializeConditionVariable(&conditionVariable);
 	isClosed = false;
 
 	this->threadCount = threadCount;
@@ -19,21 +19,21 @@ ThreadPool::ThreadPool(INT threadCount)
 
 VOID ThreadPool::EnqueueTask(TASK *task)
 {
-	EnterCriticalSection(&lock);
+	//EnterCriticalSection(&lock);
 	tasks.push(task);
-	WakeAllConditionVariable(&conditionVariable);
-	LeaveCriticalSection(&lock);
+	//WakeAllConditionVariable(&conditionVariable);
+	//LeaveCriticalSection(&lock);
 }
 
 VOID ThreadPool::Close()
 {
 	if (!isClosed)
 	{
-		EnterCriticalSection(&lock);
-		if (!isClosed)
+		//EnterCriticalSection(&lock);
+		//if (!isClosed)
 		{
 			isClosed = true;
-			WakeAllConditionVariable(&conditionVariable);
+			//WakeAllConditionVariable(&conditionVariable);
 
 			for (int i = 0; i < threadCount; i++)
 			{
@@ -42,7 +42,7 @@ VOID ThreadPool::Close()
 			}
 			delete[] threads;
 		}
-		LeaveCriticalSection(&lock);	
+		//LeaveCriticalSection(&lock);	
 	}
 }
 
@@ -56,12 +56,13 @@ ThreadPool::~ThreadPool()
 
 TASK* ThreadPool::DequeueTask()
 {
-	EnterCriticalSection(&lock);
+	//EnterCriticalSection(&lock);
 
 	while (tasks.size() == 0 && !isClosed)
 	{
 		// The queue is empty - sleep so consumers can put tasks
-		SleepConditionVariableCS(&conditionVariable, &lock, INFINITE);
+		//SleepConditionVariableCS(&conditionVariable, &lock, INFINITE);
+		Sleep(500);
 	}
 
 	TASK *task = NULL;
@@ -71,7 +72,7 @@ TASK* ThreadPool::DequeueTask()
 		tasks.pop();
 	}
 
-	LeaveCriticalSection(&lock);
+	//LeaveCriticalSection(&lock);
 	return task;
 }
 

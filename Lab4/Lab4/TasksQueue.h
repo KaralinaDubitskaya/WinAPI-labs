@@ -9,11 +9,12 @@ public:
 	VOID push(TASK *task);
 	TASK* pop();
 	TASK* front();
+	long size();
 	~TasksQueue();
 private:
 	TASK *tasks = NULL;
 	volatile long count;
-	volatile long front;
+	volatile long head;
 	CRITICAL_SECTION lock;
 };
 
