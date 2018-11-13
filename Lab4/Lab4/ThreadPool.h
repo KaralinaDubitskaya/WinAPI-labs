@@ -3,7 +3,6 @@
 #include "TasksQueue.h"
 
 using namespace std;
-#include <queue>
 
 class ThreadPool
 {
@@ -13,7 +12,6 @@ public:
 	void Close();
 	~ThreadPool();
 private:
-	//queue<TASK*> tasks;
 	TasksQueue *tasks;
 	HANDLE* threads;
 	CRITICAL_SECTION lock;

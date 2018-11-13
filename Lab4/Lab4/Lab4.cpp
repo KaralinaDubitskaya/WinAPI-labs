@@ -4,16 +4,18 @@
 #include "stdafx.h"
 #include "StringSorter.h"
 
-#define FILE_INPUT "input.txt"
-#define FILE_OUTPUT "output.txt"
-
 int main()
 {
 	int threadCount;
-	cout << "Enter number of threads: ";
+	string inputFile, outputFile;
+	cout << "Number of threads: ";
 	cin >> threadCount;
+	cout << "Input file: ";
+	cin >> inputFile;
+	cout << "Output file: ";
+	cin >> outputFile;
 	StringSorter sorter(threadCount);
-	sorter.sort(FILE_INPUT, FILE_OUTPUT);
+	sorter.sort(inputFile, outputFile);
 	printf("File was succesfully sorted\n");
 	getchar();
 	getchar();

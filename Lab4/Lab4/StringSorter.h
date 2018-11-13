@@ -13,7 +13,7 @@ class StringSorter
 {
 public:
 	StringSorter(int threadCount);
-	VOID sort(LPSTR inputFile, LPSTR outputFile);
+	VOID sort(string inputFile, string outputFile);
 	~StringSorter();
 private:
 	static DWORD WINAPI sortStringVector(LPVOID param);
@@ -22,10 +22,10 @@ private:
 	int threadCount;
 	INT runtimeThreadCount;
 	CRITICAL_SECTION lock;
-	vector<string> *getStrings(LPSTR inputFile);
+	vector<string> *getStrings(string inputFile);
 	vector<vector<string>*>* divideVector(vector<string>* strings, int count);
 	vector<string>* mergeSortedVectors(vector<vector<string>*>* vectors);
-	void writeStringsToFile(LPSTR file, vector<string>* strings);
+	void writeStringsToFile(string file, vector<string>* strings);
 
 	struct PARAM
 	{

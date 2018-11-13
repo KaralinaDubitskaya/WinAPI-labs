@@ -21,7 +21,6 @@ void ThreadPool::enqueueTask(TASK* task)
 {
 	EnterCriticalSection(&lock);
 	tasks->push(task);
-	//tasks.push(task);
 	WakeConditionVariable(&conditionVariable);
 	LeaveCriticalSection(&lock);
 }
@@ -55,20 +54,14 @@ ThreadPool::~ThreadPool()
 TASK* ThreadPool::dequeueTask()
 {
 	EnterCriticalSection(&lock);
-	//	
-	//while (tasks.size() == 0 && !isClosed)
 	while (tasks->size() == 0 && !isClosed)
 	{
 		// The queue is empty - sleep so consumers can put tasks
 		SleepConditionVariableCS(&conditionVariable, &lock, INFINITE);
 	}
 	TASK* task = NULL;
-	//	
-	//if (tasks.size() != 0)
 	if (tasks->size() != 0)
 	{
-		/*task = tasks.front();
-		tasks.pop();*/
 		task = tasks->front();
 		tasks->pop();
 	}

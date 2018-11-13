@@ -12,7 +12,7 @@ StringSorter::StringSorter(int threadCount)
 	InitializeCriticalSection(&lock);
 }
 
-VOID StringSorter::sort(LPSTR inputFile, LPSTR outputFile)
+VOID StringSorter::sort(string inputFile, string outputFile)
 {
 	vector<string>* stringVector = getStrings(inputFile);
 	vector<vector<string>*>* stringVectors = divideVector(stringVector, threadCount);
@@ -39,7 +39,6 @@ VOID StringSorter::sort(LPSTR inputFile, LPSTR outputFile)
 		LeaveCriticalSection(&lock);
 		Sleep(200);
 	}
-	//DeleteCriticalSection(&lock);
 	delete[] params;
 	delete[] tasks;
 	vector<string> *result = mergeSortedVectors(stringVectors);
@@ -52,7 +51,7 @@ StringSorter::~StringSorter()
 	threadPool->Close();
 }
 
-vector<string>* StringSorter::getStrings(LPSTR inputFile)
+vector<string>* StringSorter::getStrings(string inputFile)
 {
 	ifstream ifstream(inputFile);
 	vector<string>* result = new vector<string>();
@@ -67,7 +66,7 @@ vector<string>* StringSorter::getStrings(LPSTR inputFile)
 	return result;
 }
 
-void StringSorter::writeStringsToFile(LPSTR file, vector<string>* strings)
+void StringSorter::writeStringsToFile(string file, vector<string>* strings)
 {
 	ofstream stream(file);
 	for (string str : *strings)
