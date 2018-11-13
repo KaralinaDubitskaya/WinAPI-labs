@@ -5,10 +5,10 @@
 
 ThreadPool::ThreadPool(INT threadCount)
 {
-	//InitializeCriticalSectionAndSpinCount(&lock, SPIN_COUNT);
-	//InitializeConditionVariable(&conditionVariable);
+	InitializeCriticalSectionAndSpinCount(&lock, SPIN_COUNT);
+	InitializeConditionVariable(&conditionVariable);
 	isClosed = false;
-
+	this->tasks = new TasksQueue();
 	this->threadCount = threadCount;
 	this->threads = new HANDLE[threadCount];
 	for (int i = 0; i < threadCount; i++)
@@ -17,33 +17,31 @@ ThreadPool::ThreadPool(INT threadCount)
 	}
 }
 
-VOID ThreadPool::EnqueueTask(TASK *task)
+void ThreadPool::enqueueTask(TASK* task)
 {
-	//EnterCriticalSection(&lock);
-	tasks.push(task);
-	//WakeAllConditionVariable(&conditionVariable);
-	//LeaveCriticalSection(&lock);
+	EnterCriticalSection(&lock);
+	tasks->push(task);
+	//tasks.push(task);
+	WakeConditionVariable(&conditionVariable);
+	LeaveCriticalSection(&lock);
 }
 
-VOID ThreadPool::Close()
+void ThreadPool::Close()
 {
 	if (!isClosed)
 	{
-		//EnterCriticalSection(&lock);
-		//if (!isClosed)
-		{
-			isClosed = true;
-			//WakeAllConditionVariable(&conditionVariable);
-
-			for (int i = 0; i < threadCount; i++)
-			{
-				WaitForSingleObject(threads[i], NULL);
-				CloseHandle(threads[i]);
-			}
-			delete[] threads;
-		}
-		//LeaveCriticalSection(&lock);	
+		EnterCriticalSection(&lock);
+		isClosed = true;
+		WakeAllConditionVariable(&conditionVariable);
+		LeaveCriticalSection(&lock);
 	}
+	for (int i = 0; i < threadCount; i++)
+	{
+		WaitForSingleObject(threads[i], INFINITE);
+		CloseHandle(threads[i]);
+	}
+	delete[] threads;
+	delete tasks;
 }
 
 ThreadPool::~ThreadPool()
@@ -54,25 +52,27 @@ ThreadPool::~ThreadPool()
 	}
 }
 
-TASK* ThreadPool::DequeueTask()
+TASK* ThreadPool::dequeueTask()
 {
-	//EnterCriticalSection(&lock);
-
-	while (tasks.size() == 0 && !isClosed)
+	EnterCriticalSection(&lock);
+	//	
+	//while (tasks.size() == 0 && !isClosed)
+	while (tasks->size() == 0 && !isClosed)
 	{
 		// The queue is empty - sleep so consumers can put tasks
-		//SleepConditionVariableCS(&conditionVariable, &lock, INFINITE);
-		Sleep(500);
+		SleepConditionVariableCS(&conditionVariable, &lock, INFINITE);
 	}
-
-	TASK *task = NULL;
-	if (tasks.size() != 0)
+	TASK* task = NULL;
+	//	
+	//if (tasks.size() != 0)
+	if (tasks->size() != 0)
 	{
-		task = tasks.front();
-		tasks.pop();
+		/*task = tasks.front();
+		tasks.pop();*/
+		task = tasks->front();
+		tasks->pop();
 	}
-
-	//LeaveCriticalSection(&lock);
+	LeaveCriticalSection(&lock);
 	return task;
 }
 
@@ -82,7 +82,7 @@ DWORD WINAPI ThreadPool::ThreadFunc(LPVOID param)
 
 	while (!threadPool->isClosed)
 	{
-		TASK *task = threadPool->DequeueTask();
+		TASK *task = threadPool->dequeueTask();
 		if (!task)
 		{
 			break;
@@ -95,3 +95,4 @@ DWORD WINAPI ThreadPool::ThreadFunc(LPVOID param)
 
 	return 0;
 }
+

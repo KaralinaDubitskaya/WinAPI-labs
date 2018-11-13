@@ -21,9 +21,11 @@ private:
 	ThreadPool *threadPool;
 	int threadCount;
 	INT runtimeThreadCount;
+	CRITICAL_SECTION lock;
 	vector<string> *getStrings(LPSTR inputFile);
 	vector<vector<string>*>* divideVector(vector<string>* strings, int count);
-	CRITICAL_SECTION *lock;
+	vector<string>* mergeSortedVectors(vector<vector<string>*>* vectors);
+	void writeStringsToFile(LPSTR file, vector<string>* strings);
 
 	struct PARAM
 	{

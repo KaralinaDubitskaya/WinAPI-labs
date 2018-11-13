@@ -8,7 +8,8 @@ StringSorter::StringSorter(int threadCount)
 {
 	this->threadCount = threadCount;
 	this->threadPool = new ThreadPool(threadCount);
-	this->lock = new CRITICAL_SECTION();
+	runtimeThreadCount = 0;
+	InitializeCriticalSection(&lock);
 }
 
 VOID StringSorter::sort(LPSTR inputFile, LPSTR outputFile)
@@ -25,20 +26,20 @@ VOID StringSorter::sort(LPSTR inputFile, LPSTR outputFile)
 		params[i].stringVector = stringVectors->at(i);
 		tasks[i].func = sortStringVector;
 		tasks[i].param = &params[i];
-		EnterCriticalSection(lock);
+		EnterCriticalSection(&lock);
 		runtimeThreadCount++;
-		threadPool->EnqueueTask(&tasks[i]);
-		LeaveCriticalSection(lock);
+		threadPool->enqueueTask(&tasks[i]);
+		LeaveCriticalSection(&lock);
 	}
 
 	while (true)
 	{
-		EnterCriticalSection(lock);
+		EnterCriticalSection(&lock);
 		if (!runtimeThreadCount) { break; }
-		LeaveCriticalSection(lock);
+		LeaveCriticalSection(&lock);
 		Sleep(200);
 	}
-
+	//DeleteCriticalSection(&lock);
 	delete[] params;
 	delete[] tasks;
 	vector<string> *result = mergeSortedVectors(stringVectors);
@@ -82,11 +83,14 @@ vector<vector<string>*>* StringSorter::divideVector(vector<string>* strings, int
 {
 	vector<vector<string>*>* result = new vector<vector<string>*>();
 	// Strings per group
-	int count = strings->size() / numOfGroups;
-	count += (strings->size() % numOfGroups) ? 1 : 0;
+	int count = strings->size() / numOfGroups + 1;
 	int index = 0;
 	for (int i = 0; i < numOfGroups; i++)
 	{
+		if (i == strings->size() % numOfGroups)
+		{
+			count--;
+		}
 		vector<string>* stringVector = new vector<string>();
 		for (int j = 0; j < count && index < strings->size(); j++)
 		{
@@ -104,9 +108,9 @@ DWORD WINAPI StringSorter::sortStringVector(LPVOID param)
 	StringSorter *sorter = paramStruct->sorter;
 	vector<string> *vector = paramStruct->stringVector;
 	std::sort(vector->begin(), vector->end());
-	EnterCriticalSection(sorter->lock);
+	EnterCriticalSection(&(sorter->lock));
 	sorter->runtimeThreadCount--;
-	LeaveCriticalSection(sorter->lock);
+	LeaveCriticalSection(&(sorter->lock));
 	return 0;
 }
 

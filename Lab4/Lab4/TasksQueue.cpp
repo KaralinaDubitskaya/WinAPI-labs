@@ -7,14 +7,14 @@ TasksQueue::TasksQueue()
 {
 	InitializeCriticalSectionAndSpinCount(&lock, SPIN_COUNT);
 	this->count = 0;
-	this->front = 0;
+	this->head = 0;
 }
 
 VOID TasksQueue::push(TASK *task)
 {
 	EnterCriticalSection(&lock);
 	InterlockedIncrement(&count);
-	if (tasks = NULL)
+	if (tasks == NULL)
 	{
 		tasks = (TASK *)malloc(sizeof(TASK) * count);
 	}

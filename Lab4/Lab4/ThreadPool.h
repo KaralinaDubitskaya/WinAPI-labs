@@ -2,22 +2,26 @@
 #include "Task.h"
 #include "TasksQueue.h"
 
+using namespace std;
+#include <queue>
+
 class ThreadPool
 {
 public:
 	ThreadPool(INT threadCount);
-	VOID EnqueueTask(TASK *task);
-	VOID Close();
+	void enqueueTask(TASK* taskStruct);
+	void Close();
 	~ThreadPool();
 private:
-	INT threadCount;
+	//queue<TASK*> tasks;
+	TasksQueue *tasks;
+	HANDLE* threads;
 	CRITICAL_SECTION lock;
 	CONDITION_VARIABLE conditionVariable;
 	volatile BOOL isClosed;
-	HANDLE *threads;
-	TasksQueue *tasks;
-
-	TASK* DequeueTask();
+	INT threadCount;
+	TASK* dequeueTask();
 	static DWORD WINAPI ThreadFunc(LPVOID param);
 };
+
 
