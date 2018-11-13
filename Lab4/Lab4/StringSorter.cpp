@@ -41,7 +41,9 @@ VOID StringSorter::sort(LPSTR inputFile, LPSTR outputFile)
 
 	delete[] params;
 	delete[] tasks;
-	vector<string> *result = mergeSort
+	vector<string> *result = mergeSortedVectors(stringVectors);
+	delete stringVectors;
+	writeStringsToFile(outputFile, result);
 }
 
 StringSorter::~StringSorter()
@@ -62,6 +64,18 @@ vector<string>* StringSorter::getStrings(LPSTR inputFile)
 	}
 	ifstream.close();
 	return result;
+}
+
+void StringSorter::writeStringsToFile(LPSTR file, vector<string>* strings)
+{
+	ofstream stream(file);
+	for (string str : *strings)
+	{
+		const char *cstr = str.c_str();
+		stream.write(cstr, strlen(cstr));
+	}
+	stream.close();
+	delete strings;
 }
 
 vector<vector<string>*>* StringSorter::divideVector(vector<string>* strings, int numOfGroups)
@@ -98,5 +112,47 @@ DWORD WINAPI StringSorter::sortStringVector(LPVOID param)
 
 vector<string>* StringSorter::mergeSortedVectors(vector<vector<string>*>* vectors)
 {
-
+	while (vectors->size() != 1)
+	{
+		int vectorCount = vectors->size() / 2;
+		vector<vector<string>*> removedVectors;
+		for (int i = 0; i < vectorCount; i++)
+		{
+			int j = i * 2;
+			vector<string>* sourceVector = vectors->at(j);
+			vector<string>* destinationVector = vectors->at(j + 1);
+			for (int k = 0; k < sourceVector->size(); k++)
+			{
+				vector<string>::iterator iterator = destinationVector->begin();
+				string str = sourceVector->at(k);
+				int l = 0;
+				while (str > *iterator && l < destinationVector->size())
+				{
+					if (l != destinationVector->size() - 1)
+					{
+						iterator++;
+					}
+					l++;
+				}
+				if (l == destinationVector->size())
+				{
+					destinationVector->push_back(str);
+				}
+				else
+				{
+					destinationVector->insert(iterator, str);
+				}
+			}
+			removedVectors.push_back(sourceVector);
+		}
+		for (int i = 0; i < vectorCount; i++)
+		{
+			vectors->erase(vectors->begin() + i);
+		}
+		for (vector<string>* vector : removedVectors)
+		{
+			delete vector;
+		}
+	}
+	return vectors->at(0);
 }
