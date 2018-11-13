@@ -1,0 +1,196 @@
+Sudan
+Gambia
+Burundi
+Iraq
+Bolivia
+Guyana
+Vanuatu
+Chile
+Botswana
+Argentina
+Eritrea
+Korea South
+St Lucia
+Colombia
+Iceland
+Senegal
+Mexico
+Kyrgyzstan
+Russian Federation
+Somalia
+Maldives
+Kazakhstan
+Macedonia
+Hungary
+Italy
+Georgia
+Croatia
+Nicaragua
+Uruguay
+Sierra Leone
+Guinea
+Burkina
+East Timor
+Belgium
+Barbados
+Bhutan
+Paraguay
+Nepal
+Jamaica
+Brunei
+Honduras
+Poland
+Indonesia
+Austria
+Belize
+United Arab Emirates
+Micronesia
+Namibia
+Albania
+Czech Republic
+Libya
+Bosnia Herzegovina
+Bangladesh
+Tuvalu
+India
+Jordan
+Denmark
+Greece
+Egypt
+Central African Rep
+Azerbaijan
+Morocco
+Equatorial Guinea
+Malawi
+Bahamas
+Bahrain
+Haiti
+Suriname
+Gabon
+Qatar
+Belarus
+Switzerland
+Guatemala
+Madagascar
+Tonga
+Slovakia
+Andorra
+Benin
+Ireland {Republic}
+Monaco
+Oman
+Venezuela
+Fiji
+Samoa
+Turkey
+Kiribati
+Nigeria
+Congo {Democratic Rep}
+Solomon Islands
+Saudi Arabia
+Nauru
+Tanzania
+Dominican Republic
+Palau
+Tunisia
+Ecuador
+New Zealand
+Uganda
+Malaysia
+Estonia
+Costa Rica
+Afghanistan
+Serbia
+Algeria
+South Sudan
+Germany
+Finland
+Comoros
+Ghana
+Ivory Coast
+Trinidad & Tobago
+Norway
+Angola
+South Africa
+Chad
+Syria
+Peru
+Cuba
+Mongolia
+Swaziland
+Dominica
+Tajikistan
+Thailand
+Ukraine
+Luxembourg
+Vietnam
+Latvia
+Armenia
+Taiwan
+Moldova
+Saint Vincent & the Grenadines
+Canada
+Spain
+France
+Portugal
+Cameroon
+Uzbekistan
+Panama
+Philippines
+Vatican City
+Togo
+Japan
+Sao Tome & Principe
+Bulgaria
+Congo
+Iran
+Malta
+Lithuania
+Cambodia
+Brazil
+El Salvador
+Cape Verde
+Ethiopia
+Yemen
+China
+Grenada
+Pakistan
+Kosovo
+Zimbabwe
+Mauritania
+Romania
+Israel
+Lebanon
+Niger
+Australia
+Antigua & Deps
+Seychelles
+Slovenia
+Lesotho
+United States
+Mauritius
+Kuwait
+Laos
+Sweden
+Myanmar, {Burma}
+United Kingdom
+Marshall Islands
+Liberia
+Mali
+Cyprus
+Papua New Guinea
+Korea North
+Singapore
+Djibouti
+Turkmenistan
+Mozambique
+Kenya
+Montenegro
+San Marino
+Liechtenstein
+St Kitts & Nevis
+Sri Lanka
+Guinea-Bissau
+Rwanda
+Netherlands
+Zambia
