@@ -10,7 +10,8 @@ The program allows you to move a shape (rectangle, ellipse or butterfly) using t
 
 Scrolling the mouse wheel moves the sprite vertically, scrolling with the shift key pressed down moves it horizontally.
 
-Choose the shape by _Draw_ menu item.                                                                                        
+Choose the shape by _Draw_ menu item.  
+                                                                                                          
 ![Lab #1 screenshot](https://github.com/KaralinaDubitskaya/WinAPI-labs/blob/master/screenshots/lab1.png)
 
 ## Laboratory work #2
